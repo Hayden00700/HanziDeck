@@ -10,8 +10,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --char-size-desktop: 250px;
-      --char-size-mobile: 200px;
+      --char-size-desktop: 280px;
+      --char-size-mobile: 220px;
       --pinyin-size-desktop: 50px;
       --pinyin-size-mobile: 36px;
     }
@@ -32,16 +32,35 @@
     }
     #sync-status-indicator { font-size: 14px; font-weight: bold; }
 
+    #search-btn, #edit-btn {
+      position: absolute;
+      top: 15px;
+      font-size: 26px;
+      color: #555;
+      text-decoration: none;
+      transition: color 0.2s;
+      cursor: pointer;
+    }
+    #search-btn { left: 20px; }
+    #edit-btn { right: 20px; }
+    #search-btn:hover, #edit-btn:hover {
+      color: #1e90ff;
+    }
+
     .main-content, .footer-controls {
         display: flex;
         flex-direction: column;
         align-items: center;
         width: 100%;
     }
+    .main-content {
+      margin-top: 2vh;
+      opacity: 0; /* Initially hide content to prevent flash */
+      transition: opacity 0.3s ease-in-out; /* Add a smooth fade-in effect */
+    }
 
     #pinyin-display {
         font-size: var(--pinyin-size-desktop); color: #2c3e50; min-height: 60px;
-        /* MODIFIED: Spacing adjusted for new position */
         margin-bottom: 15px;
         text-align: center;
     }
@@ -49,13 +68,11 @@
       font-size: var(--char-size-desktop); font-family: "Noto Serif TC", serif;
       display: flex; justify-content: center; align-items: center;
       min-width: 350px; min-height: 350px;
-      /* MODIFIED: Add a little space below the character */
       margin-bottom: 5px;
     }
     #char-actions {
         display: flex;
         gap: 30px;
-        /* MODIFIED: Removed top margin, as pinyin's bottom margin now handles spacing */
     }
     #speak-btn, #stroke-btn {
       background: none; border: none; color: #333; font-size: 40px;
@@ -71,14 +88,49 @@
       color: white; background-color: #1e90ff; cursor: pointer; min-width: 100px;
     }
     button:hover { opacity: 0.85; }
-    .extra-buttons { display: flex; gap: 10px; margin-top: 10px; align-items: center; }
-    .extra-buttons button { background-color: #555; }
     .again { background-color: #e74c3c; } .hard { background-color: #f39c12; }
     .good { background-color: #2ecc71; } .easy { background-color: #3498db; }
+    
+    #practice-container {
+      display: none;
+      flex-direction: row;
+      justify-content: center;
+      align-items: flex-start;
+      gap: 20px;
+      margin-top: 5px;
+      padding: 10px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    #stroke-order-animation, #handwriting-area {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    #stroke-order-animation img {
+      max-width: 300px;
+      height: auto;
+      border-radius: 5px;
+      border: 1px solid #ddd;
+    }
+    #handwriting-canvas {
+      background-color: #fff;
+      border: 1px solid #999;
+      cursor: crosshair;
+      border-radius: 5px;
+    }
+    #handwriting-controls button {
+      background-color: #6c757d;
+      min-width: 120px;
+    }
 
-    @media (max-width: 600px) {
+    @media (max-width: 768px) {
       body {
-        padding: 50px 10px 20px 10px;
+        padding: 60px 10px 20px 10px;
+      }
+      #search-btn, #edit-btn {
+        font-size: 24px;
       }
       #pinyin-display { font-size: var(--pinyin-size-mobile); min-height: 40px; }
       #char {
@@ -86,10 +138,17 @@
         min-width: 280px;
         min-height: 280px;
       }
-      #char img { max-width: 280px !important; }
       #speak-btn, #stroke-btn { font-size: 32px; }
       .buttons { gap: 5px; }
       button { font-size: 16px; padding: 8px 10px; min-width: 80px; }
+
+      #practice-container {
+        flex-direction: column;
+        align-items: center;
+      }
+      #stroke-order-animation img {
+        max-width: 280px;
+      }
     }
   </style>
 </head>
@@ -98,14 +157,24 @@
     <span id="status">Loading...</span>
     <span id="sync-status-indicator"></span>
   </div>
+  <a id="search-btn" aria-label="Search Character"><i class="bi bi-search"></i></a>
+  <a href="edit.html" id="edit-btn" aria-label="Edit Deck & Settings"><i class="bi bi-gear-fill"></i></a>
   
   <div class="main-content">
-    <!-- MODIFIED: HTML elements reordered -->
     <div id="char">Loading...</div>
     <div id="pinyin-display"></div>
     <div id="char-actions">
         <button id="speak-btn" onclick="speakCharacter()" aria-label="Speak"><i class="bi bi-volume-up-fill"></i></button>
-        <button id="stroke-btn" onclick="showStrokeOrder()" aria-label="Show Stroke Order"><i class="bi bi-pen-fill"></i></button>
+        <button id="stroke-btn" onclick="showStrokeOrder()" aria-label="Show Stroke Order & Practice"><i class="bi bi-pen-fill"></i></button>
+    </div>
+    <div id="practice-container">
+      <div id="stroke-order-animation"></div>
+      <div id="handwriting-area">
+        <canvas id="handwriting-canvas"></canvas>
+        <div id="handwriting-controls">
+          <button id="clear-canvas-btn">Clear</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -116,13 +185,9 @@
       <button id="btn-good" class="good" onclick="rate('good')">Good<br><small>...</small></button>
       <button id="btn-easy" class="easy" onclick="rate('easy')">Easy<br><small>...</small></button>
     </div>
-    <div class="extra-buttons">
-      <button onclick="location.href='edit.html'">Edit Deck & Settings</button>
-    </div>
   </div>
 
   <script>
-    // --- JAVASCRIPT IS UNCHANGED ---
     let cards = {};
     let currentCard = null;
     const synth = window.speechSynthesis;
@@ -140,6 +205,97 @@
     const GIST_API_BASE = 'https://api.github.com/gists/';
     let accessToken = '';
     let gistId = '';
+
+    // --- Handwriting Canvas Logic ---
+    const canvas = document.getElementById('handwriting-canvas');
+    const ctx = canvas.getContext('2d');
+    let isDrawing = false;
+    let lastX = 0, lastY = 0;
+
+    function setupCanvas() {
+        const size = window.innerWidth < 768 ? 280 : 300;
+        canvas.width = size;
+        canvas.height = size;
+        ctx.strokeStyle = '#2c3e50';
+        ctx.lineWidth = 6;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+    }
+    function drawBackgroundCharacter() {
+        if (!currentCard || !currentCard.char) return;
+        const char = currentCard.char;
+        const size = canvas.width * 0.8;
+        ctx.globalAlpha = 0.2;
+        ctx.fillStyle = '#333';
+        ctx.font = `${size}px "Noto Serif TC", serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(char, canvas.width / 2, canvas.height / 2);
+        ctx.globalAlpha = 1.0;
+    }
+    function getCoordinates(e) {
+        const rect = canvas.getBoundingClientRect();
+        if (e.touches && e.touches.length > 0) {
+            return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
+        }
+        return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    }
+    function startDrawing(e) {
+        e.preventDefault();
+        isDrawing = true;
+        const { x, y } = getCoordinates(e);
+        [lastX, lastY] = [x, y];
+    }
+    function draw(e) {
+        if (!isDrawing) return;
+        e.preventDefault();
+        const { x, y } = getCoordinates(e);
+        ctx.beginPath();
+        ctx.moveTo(lastX, lastY);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+        [lastX, lastY] = [x, y];
+    }
+    function stopDrawing() { isDrawing = false; }
+    function clearCanvas() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawBackgroundCharacter();
+    }
+    
+    canvas.addEventListener('mousedown', startDrawing);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', stopDrawing);
+    canvas.addEventListener('mouseout', stopDrawing);
+    canvas.addEventListener('touchstart', startDrawing, { passive: false });
+    canvas.addEventListener('touchmove', draw, { passive: false });
+    canvas.addEventListener('touchend', stopDrawing);
+    document.getElementById('clear-canvas-btn').addEventListener('click', clearCanvas);
+    window.addEventListener('resize', setupCanvas);
+    // --- End of Handwriting Canvas Logic ---
+
+    function searchForChar() {
+      const charToFind = prompt("Enter a character to search for:");
+      if (!charToFind || charToFind.trim().length !== 1) {
+        if (charToFind !== null) alert("Please enter a single character.");
+        return;
+      }
+      
+      const foundCard = cards[charToFind.trim()];
+      if (foundCard) {
+        if (isStrokeVisible) showStrokeOrder(); // Toggle off if open
+        
+        currentCard = foundCard;
+        document.getElementById("char").innerHTML = currentCard.char;
+        document.getElementById('pinyin-display').textContent = '';
+        document.getElementById('char').style.display = 'flex';
+        document.getElementById('practice-container').style.display = 'none';
+        
+        toggleControls(true);
+        updateButtonLabels();
+      } else {
+        alert(`Character "${charToFind}" not found in your deck.`);
+      }
+    }
 
     function updateSyncStatus(message, isError = false) {
       const statusEl = document.getElementById('sync-status-indicator');
@@ -219,30 +375,56 @@
             return `API call failed: ${error.message}`;
         }
     }
-    async function speakCharacter() {
+
+    function speakCharacter() {
         if (!currentCard || !currentCard.char) return;
-        if (!isStrokeVisible) document.getElementById('pinyin-display').textContent = await fetchZhuyin(currentCard.char);
         if (synth.speaking) synth.cancel();
         const utterance = new SpeechSynthesisUtterance(currentCard.char);
-        utterance.voice = chineseVoice; utterance.lang = 'zh-TW'; utterance.rate = 0.8;
+        utterance.voice = chineseVoice;
+        utterance.lang = 'zh-TW';
+        utterance.rate = 0.8;
         synth.speak(utterance);
+        if (!isStrokeVisible) {
+            fetchZhuyin(currentCard.char)
+                .then(zhuyin => {
+                    document.getElementById('pinyin-display').textContent = zhuyin;
+                });
+        }
     }
+    
     function charToHex(char) { return char ? char.codePointAt(0).toString(16).toLowerCase() : ''; }
+
     function showStrokeOrder() {
-        const charElement = document.getElementById('char'), strokeBtn = document.getElementById('stroke-btn');
+        const charElement = document.getElementById('char');
+        const practiceContainer = document.getElementById('practice-container');
+        const strokeBtn = document.getElementById('stroke-btn');
         if (!currentCard || !currentCard.char) return;
+
         if (isStrokeVisible) {
-            charElement.innerHTML = currentCard.char;
+            practiceContainer.style.display = 'none';
+            charElement.style.display = 'flex';
+            charElement.textContent = currentCard.char;
             strokeBtn.querySelector('i').className = 'bi bi-pen-fill';
             isStrokeVisible = false;
         } else {
-            const hex = charToHex(currentCard.char); if (!hex) return alert('Cannot get character Unicode.');
+            charElement.style.display = 'none';
+            const hex = charToHex(currentCard.char);
+            if (!hex) {
+              alert('Cannot get character Unicode.');
+              return;
+            }
             const url = `https://www.twpen.com/bishun-animation/${hex}-stroke-order.gif`;
-            charElement.innerHTML = `<img src="${url}" alt="${currentCard.char} Stroke Order Animation" style="max-width: 100%; height: auto; border-radius: 5px;">`;
+            document.getElementById('stroke-order-animation').innerHTML = `<img src="${url}" alt="${currentCard.char} Stroke Order Animation">`;
+            
+            setupCanvas();
+            clearCanvas();
+
+            practiceContainer.style.display = 'flex';
             strokeBtn.querySelector('i').className = 'bi bi-x-circle-fill';
             isStrokeVisible = true;
         }
     }
+
     function minutesToMs(mins) { return mins * 60 * 1000; }
     function formatInterval(minutes) {
       if (minutes < 60) return `${Math.max(1, Math.round(minutes))}m`;
@@ -297,8 +479,22 @@
             }, 0);
             if (newCardsAdded > 0) saveProgress();
         }
-      } catch (error) { console.error("chars.txt not found or failed to load.", error);
-      } finally { updateStatus(); showNextCard(); }
+      } catch (error) { 
+        console.error("chars.txt not found or failed to load.", error);
+      } finally {
+        updateStatus();
+        if (Object.keys(cards).length > 0) {
+            showNextCard();
+        } else {
+            document.getElementById("char").textContent = "Deck is empty. Add cards in \"Edit Deck & Settings\".";
+            currentCard = null;
+            toggleControls(false);
+            updateButtonLabels();
+        }
+        // --- KEY CHANGE ---
+        // Reveal the main content only after all logic is complete.
+        document.querySelector('.main-content').style.opacity = 1;
+      }
     }
     function updateStatus() {
       const total = Object.keys(cards).length;
@@ -306,31 +502,44 @@
       document.getElementById("status").textContent = `Due: ${dueNow} / Total: ${total}`;
     }
     function showNextCard() {
-      const dueCards = Object.values(cards).filter(c => c.due <= Date.now());
+      document.getElementById('practice-container').style.display = 'none';
+      document.getElementById('char').style.display = 'flex';
       isStrokeVisible = false;
       document.getElementById('stroke-btn').querySelector('i').className = 'bi bi-pen-fill';
       document.getElementById('pinyin-display').textContent = '';
-      if (dueCards.length > 0) currentCard = dueCards[Math.floor(Math.random() * dueCards.length)];
-      else if (Object.keys(cards).length > 0) currentCard = Object.values(cards).sort((a, b) => a.due - b.due)[0];
-      else currentCard = null;
+      
+      const dueCards = Object.values(cards).filter(c => c.due <= Date.now());
+      if (dueCards.length > 0) {
+        currentCard = dueCards[Math.floor(Math.random() * dueCards.length)];
+      } else if (Object.keys(cards).length > 0) {
+        currentCard = Object.values(cards).sort((a, b) => a.due - b.due)[0];
+      } else {
+        currentCard = null;
+      }
+      
       if (currentCard) {
-        document.getElementById("char").textContent = currentCard.char;
+        document.getElementById("char").innerHTML = currentCard.char;
         toggleControls(true);
       } else {
-        document.getElementById("char").textContent = "Deck is empty. Add cards in \"Edit Deck & Settings\".";
+        document.getElementById("char").textContent = "All cards reviewed for now!";
         toggleControls(false);
       }
-      updateStatus(); updateButtonLabels();
+
+      updateStatus(); 
+      updateButtonLabels();
     }
     function rate(action) {
       if (!currentCard) return;
       const { interval, ease } = calculateNextState(currentCard, action);
       currentCard.interval = interval; currentCard.ease = ease;
       currentCard.due = Date.now() + minutesToMs(interval);
-      saveProgress(); showNextCard();
+      saveProgress(); 
+      showNextCard();
     }
     
     loadCredentials();
+    setupCanvas();
+    document.getElementById('search-btn').addEventListener('click', searchForChar);
     initializeDeck();
   </script>
 </body>
