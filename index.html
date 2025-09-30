@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Random Chinese Character - Anki Mode</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --char-size-desktop: 250px;
+      --char-size-mobile: 200px;
+      --pinyin-size-desktop: 50px;
+      --pinyin-size-mobile: 36px;
+    }
+    html, body { height: 100%; width: 100%; overflow-x: hidden; }
+    body {
+      display: flex; flex-direction: column;
+      justify-content: space-between;
+      align-items: center; margin: 0;
+      padding: 50px 10px 20px 10px;
+      box-sizing: border-box; background-color: #fefefe;
+      font-family: "Noto Serif TC", "Microsoft JhengHei", sans-serif;
+    }
+    #status-container {
+      position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
+      display: flex; align-items: center; gap: 10px;
+      font-size: 18px; color: #333;
+      white-space: nowrap;
+    }
+    #sync-status-indicator { font-size: 14px; font-weight: bold; }
+
+    .main-content, .footer-controls {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+    }
+
+    #pinyin-display {
+        font-size: var(--pinyin-size-desktop); color: #2c3e50; min-height: 60px;
+        /* MODIFIED: Spacing adjusted for new position */
+        margin-bottom: 15px;
+        text-align: center;
+    }
+    #char {
+      font-size: var(--char-size-desktop); font-family: "Noto Serif TC", serif;
+      display: flex; justify-content: center; align-items: center;
+      min-width: 350px; min-height: 350px;
+      /* MODIFIED: Add a little space below the character */
+      margin-bottom: 5px;
+    }
+    #char-actions {
+        display: flex;
+        gap: 30px;
+        /* MODIFIED: Removed top margin, as pinyin's bottom margin now handles spacing */
+    }
+    #speak-btn, #stroke-btn {
+      background: none; border: none; color: #333; font-size: 40px;
+      cursor: pointer; padding: 0; line-height: 1; transition: color 0.2s, opacity 0.2s;
+    }
+    #speak-btn:hover, #stroke-btn:hover { color: #1e90ff; }
+    .buttons {
+      display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;
+      justify-content: center;
+    }
+    button {
+      font-size: 18px; padding: 10px 15px; border: none; border-radius: 6px;
+      color: white; background-color: #1e90ff; cursor: pointer; min-width: 100px;
+    }
+    button:hover { opacity: 0.85; }
+    .extra-buttons { display: flex; gap: 10px; margin-top: 10px; align-items: center; }
+    .extra-buttons button { background-color: #555; }
+    .again { background-color: #e74c3c; } .hard { background-color: #f39c12; }
+    .good { background-color: #2ecc71; } .easy { background-color: #3498db; }
+
+    @media (max-width: 600px) {
+      body {
+        padding: 50px 10px 20px 10px;
+      }
+      #pinyin-display { font-size: var(--pinyin-size-mobile); min-height: 40px; }
+      #char {
+        font-size: var(--char-size-mobile);
+        min-width: 280px;
+        min-height: 280px;
+      }
+      #char img { max-width: 280px !important; }
+      #speak-btn, #stroke-btn { font-size: 32px; }
+      .buttons { gap: 5px; }
+      button { font-size: 16px; padding: 8px 10px; min-width: 80px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="status-container">
+    <span id="status">Loading...</span>
+    <span id="sync-status-indicator"></span>
+  </div>
+  
+  <div class="main-content">
+    <!-- MODIFIED: HTML elements reordered -->
+    <div id="char">Loading...</div>
+    <div id="pinyin-display"></div>
+    <div id="char-actions">
+        <button id="speak-btn" onclick="speakCharacter()" aria-label="Speak"><i class="bi bi-volume-up-fill"></i></button>
+        <button id="stroke-btn" onclick="showStrokeOrder()" aria-label="Show Stroke Order"><i class="bi bi-pen-fill"></i></button>
+    </div>
+  </div>
+
+  <div class="footer-controls">
+    <div class="buttons">
+      <button id="btn-again" class="again" onclick="rate('again')">Again<br><small>...</small></button>
+      <button id="btn-hard" class="hard" onclick="rate('hard')">Hard<br><small>...</small></button>
+      <button id="btn-good" class="good" onclick="rate('good')">Good<br><small>...</small></button>
+      <button id="btn-easy" class="easy" onclick="rate('easy')">Easy<br><small>...</small></button>
+    </div>
+    <div class="extra-buttons">
+      <button onclick="location.href='edit.html'">Edit Deck & Settings</button>
+    </div>
+  </div>
+
+  <script>
+    // --- JAVASCRIPT IS UNCHANGED ---
+    let cards = {};
+    let currentCard = null;
+    const synth = window.speechSynthesis;
+    let chineseVoice = null;
+    let isStrokeVisible = false;
+    
+    const MOEDICT_API_BASE = 'https://www.moedict.tw/raw/';
+    const GIST_FILENAME = 'progress.json';
+    const CONSTANTS = {
+      AGAIN_INTERVAL: 1, MIN_GOOD_INTERVAL: 10, MIN_EASE: 130, EASY_INITIAL_DAYS: 3,
+      EASY_MULTIPLIER: 1.3, HARD_MULTIPLIER: 1.2, MIN_DAY_INTERVAL: 1440,
+      EASE_PENALTY_AGAIN: 20, EASE_PENALTY_HARD: 15, EASE_BONUS_EASY: 20
+    };
+    
+    const GIST_API_BASE = 'https://api.github.com/gists/';
+    let accessToken = '';
+    let gistId = '';
+
+    function updateSyncStatus(message, isError = false) {
+      const statusEl = document.getElementById('sync-status-indicator');
+      if (!accessToken || !gistId) {
+        statusEl.textContent = 'Local';
+        statusEl.style.color = '#f39c12';
+        return;
+      }
+      statusEl.textContent = 'Sync';
+      statusEl.style.color = isError ? '#e74c3c' : '#2ecc71';
+    }
+
+    async function saveToCloud() {
+      if (!accessToken || !gistId) return;
+      try {
+        const response = await fetch(`${GIST_API_BASE}${gistId}`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `token ${accessToken}`, 'Accept': 'application/vnd.github.v3+json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ files: { [GIST_FILENAME]: { content: JSON.stringify(cards) } } })
+        });
+        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+        updateSyncStatus('Synced', false);
+      } catch (error) {
+        console.error('Failed to save to Gist:', error);
+        updateSyncStatus('Sync Failed', true);
+      }
+    }
+
+    async function loadFromCloud() {
+      if (!accessToken || !gistId) return false;
+      try {
+        const response = await fetch(`${GIST_API_BASE}${gistId}`, {
+          method: 'GET',
+          headers: { 'Authorization': `token ${accessToken}`, 'Accept': 'application/vnd.github.v3+json' }
+        });
+        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+        const data = await response.json();
+        if (data.files && data.files[GIST_FILENAME]) {
+            const content = data.files[GIST_FILENAME].content;
+            cards = content ? JSON.parse(content) : {};
+        }
+        updateSyncStatus('Connected', false);
+        return true;
+      } catch (error) {
+        console.error('Failed to load from Gist:', error);
+        updateSyncStatus('Connection Failed', true);
+        return false;
+      }
+    }
+    
+    function loadCredentials() {
+      accessToken = localStorage.getItem('ankiAccessToken') || '';
+      gistId = localStorage.getItem('ankiGistId') || '';
+    }
+    
+    function setChineseVoice() {
+        const voices = synth.getVoices();
+        chineseVoice = voices.find(voice => voice.lang.includes('zh-TW') || voice.lang.includes('zh-CN')) || voices.find(voice => voice.lang.includes('zh'));
+    }
+    if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = setChineseVoice;
+    setChineseVoice();
+    
+    async function fetchZhuyin(char) {
+        document.getElementById('pinyin-display').textContent = '...';
+        try {
+            if (!char) return 'Character missing';
+            const resp = await fetch(MOEDICT_API_BASE + encodeURIComponent(char));
+            if (!resp.ok) return `API Error: HTTP ${resp.status}`;
+            const data = await resp.json();
+            const bopos = [...new Set(data.heteronyms.map(h => h.bopomofo).filter(Boolean))];
+            return bopos.length > 0 ? bopos.join(' / ') : 'No pronunciation data found.';
+        } catch (error) { 
+            console.error("Moedict API failed:", error); 
+            return `API call failed: ${error.message}`;
+        }
+    }
+    async function speakCharacter() {
+        if (!currentCard || !currentCard.char) return;
+        if (!isStrokeVisible) document.getElementById('pinyin-display').textContent = await fetchZhuyin(currentCard.char);
+        if (synth.speaking) synth.cancel();
+        const utterance = new SpeechSynthesisUtterance(currentCard.char);
+        utterance.voice = chineseVoice; utterance.lang = 'zh-TW'; utterance.rate = 0.8;
+        synth.speak(utterance);
+    }
+    function charToHex(char) { return char ? char.codePointAt(0).toString(16).toLowerCase() : ''; }
+    function showStrokeOrder() {
+        const charElement = document.getElementById('char'), strokeBtn = document.getElementById('stroke-btn');
+        if (!currentCard || !currentCard.char) return;
+        if (isStrokeVisible) {
+            charElement.innerHTML = currentCard.char;
+            strokeBtn.querySelector('i').className = 'bi bi-pen-fill';
+            isStrokeVisible = false;
+        } else {
+            const hex = charToHex(currentCard.char); if (!hex) return alert('Cannot get character Unicode.');
+            const url = `https://www.twpen.com/bishun-animation/${hex}-stroke-order.gif`;
+            charElement.innerHTML = `<img src="${url}" alt="${currentCard.char} Stroke Order Animation" style="max-width: 100%; height: auto; border-radius: 5px;">`;
+            strokeBtn.querySelector('i').className = 'bi bi-x-circle-fill';
+            isStrokeVisible = true;
+        }
+    }
+    function minutesToMs(mins) { return mins * 60 * 1000; }
+    function formatInterval(minutes) {
+      if (minutes < 60) return `${Math.max(1, Math.round(minutes))}m`;
+      const hours = minutes / 60;
+      return hours < 24 ? `${Math.round(hours)}h` : `${Math.round(hours / 24)}d`;
+    }
+    function saveProgress() {
+      if (accessToken && gistId) saveToCloud();
+      else localStorage.setItem("ankiCards", JSON.stringify(cards));
+    }
+    async function loadProgress() {
+      const cloudSuccess = await loadFromCloud();
+      if (!cloudSuccess) {
+        const saved = localStorage.getItem("ankiCards");
+        if (saved) cards = JSON.parse(saved);
+      }
+      updateSyncStatus();
+    }
+    function calculateNextState(card, action) {
+        let newInterval, newEase = card.ease;
+        const good = card.interval < CONSTANTS.MIN_GOOD_INTERVAL ? CONSTANTS.MIN_GOOD_INTERVAL : card.interval * (card.ease / 100);
+        switch(action) {
+            case "again": newInterval = CONSTANTS.AGAIN_INTERVAL; newEase = Math.max(CONSTANTS.MIN_EASE, newEase - CONSTANTS.EASE_PENALTY_AGAIN); break;
+            case "hard": newInterval = (CONSTANTS.AGAIN_INTERVAL + good) / 2 * CONSTANTS.HARD_MULTIPLIER; newEase = Math.max(CONSTANTS.MIN_EASE, newEase - CONSTANTS.EASE_PENALTY_HARD); break;
+            case "good": newInterval = good; break;
+            case "easy": newInterval = (card.interval < CONSTANTS.MIN_DAY_INTERVAL ? CONSTANTS.MIN_DAY_INTERVAL * CONSTANTS.EASY_INITIAL_DAYS : good * CONSTANTS.EASY_MULTIPLIER); newEase += CONSTANTS.EASE_BONUS_EASY; break;
+        }
+        return { interval: Math.round(newInterval), ease: newEase };
+    }
+    function updateButtonLabels() {
+        ['again', 'hard', 'good', 'easy'].forEach(action => {
+            const small = document.getElementById(`btn-${action}`).querySelector('small');
+            small.textContent = currentCard ? formatInterval(calculateNextState(currentCard, action).interval) : '---';
+        });
+    }
+    function toggleControls(enabled) {
+      [document.getElementById('speak-btn'), document.getElementById('stroke-btn')].forEach(btn => {
+        btn.disabled = !enabled; btn.style.opacity = enabled ? 1.0 : 0.5;
+        btn.style.cursor = enabled ? 'pointer' : 'default';
+      });
+    }
+    async function initializeDeck() {
+      await loadProgress();
+      try {
+        const response = await fetch("chars.txt");
+        if (response.ok) {
+            const text = await response.text();
+            const chars = text.split(/\r?\n/).map(c => c.trim()).filter(c => c.length === 1);
+            let newCardsAdded = chars.reduce((count, c) => {
+              if (!cards[c]) { cards[c] = { char: c, interval: 0, ease: 250, due: Date.now() }; return count + 1; }
+              return count;
+            }, 0);
+            if (newCardsAdded > 0) saveProgress();
+        }
+      } catch (error) { console.error("chars.txt not found or failed to load.", error);
+      } finally { updateStatus(); showNextCard(); }
+    }
+    function updateStatus() {
+      const total = Object.keys(cards).length;
+      const dueNow = Object.values(cards).filter(c => c.due <= Date.now()).length;
+      document.getElementById("status").textContent = `Due: ${dueNow} / Total: ${total}`;
+    }
+    function showNextCard() {
+      const dueCards = Object.values(cards).filter(c => c.due <= Date.now());
+      isStrokeVisible = false;
+      document.getElementById('stroke-btn').querySelector('i').className = 'bi bi-pen-fill';
+      document.getElementById('pinyin-display').textContent = '';
+      if (dueCards.length > 0) currentCard = dueCards[Math.floor(Math.random() * dueCards.length)];
+      else if (Object.keys(cards).length > 0) currentCard = Object.values(cards).sort((a, b) => a.due - b.due)[0];
+      else currentCard = null;
+      if (currentCard) {
+        document.getElementById("char").textContent = currentCard.char;
+        toggleControls(true);
+      } else {
+        document.getElementById("char").textContent = "Deck is empty. Add cards in \"Edit Deck & Settings\".";
+        toggleControls(false);
+      }
+      updateStatus(); updateButtonLabels();
+    }
+    function rate(action) {
+      if (!currentCard) return;
+      const { interval, ease } = calculateNextState(currentCard, action);
+      currentCard.interval = interval; currentCard.ease = ease;
+      currentCard.due = Date.now() + minutesToMs(interval);
+      saveProgress(); showNextCard();
+    }
+    
+    loadCredentials();
+    initializeDeck();
+  </script>
+</body>
+</html>
