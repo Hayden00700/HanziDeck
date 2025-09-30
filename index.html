@@ -54,14 +54,14 @@
         width: 100%;
     }
     .main-content {
-      margin-top: 2vh;
-      opacity: 0; /* Initially hide content to prevent flash */
-      transition: opacity 0.3s ease-in-out; /* Add a smooth fade-in effect */
+      margin-top: 0;
+      opacity: 0; 
+      transition: opacity 0.3s ease-in-out;
     }
 
     #pinyin-display {
         font-size: var(--pinyin-size-desktop); color: #2c3e50; min-height: 60px;
-        margin-bottom: 15px;
+        margin-bottom: 5px; /* Reduced margin to move content up */
         text-align: center;
     }
     #char {
@@ -206,6 +206,8 @@
     let accessToken = '';
     let gistId = '';
 
+    const footerControls = document.querySelector('.footer-controls');
+
     // --- Handwriting Canvas Logic ---
     const canvas = document.getElementById('handwriting-canvas');
     const ctx = canvas.getContext('2d');
@@ -282,14 +284,15 @@
       
       const foundCard = cards[charToFind.trim()];
       if (foundCard) {
-        if (isStrokeVisible) showStrokeOrder(); // Toggle off if open
+        if (isStrokeVisible) showStrokeOrder(); 
         
         currentCard = foundCard;
         document.getElementById("char").innerHTML = currentCard.char;
         document.getElementById('pinyin-display').textContent = '';
         document.getElementById('char').style.display = 'flex';
         document.getElementById('practice-container').style.display = 'none';
-        
+        footerControls.style.display = 'flex';
+
         toggleControls(true);
         updateButtonLabels();
       } else {
@@ -403,11 +406,13 @@
         if (isStrokeVisible) {
             practiceContainer.style.display = 'none';
             charElement.style.display = 'flex';
+            footerControls.style.display = 'flex';
             charElement.textContent = currentCard.char;
             strokeBtn.querySelector('i').className = 'bi bi-pen-fill';
             isStrokeVisible = false;
         } else {
             charElement.style.display = 'none';
+            footerControls.style.display = 'none';
             const hex = charToHex(currentCard.char);
             if (!hex) {
               alert('Cannot get character Unicode.');
@@ -491,8 +496,6 @@
             toggleControls(false);
             updateButtonLabels();
         }
-        // --- KEY CHANGE ---
-        // Reveal the main content only after all logic is complete.
         document.querySelector('.main-content').style.opacity = 1;
       }
     }
@@ -504,6 +507,7 @@
     function showNextCard() {
       document.getElementById('practice-container').style.display = 'none';
       document.getElementById('char').style.display = 'flex';
+      footerControls.style.display = 'flex';
       isStrokeVisible = false;
       document.getElementById('stroke-btn').querySelector('i').className = 'bi bi-pen-fill';
       document.getElementById('pinyin-display').textContent = '';
