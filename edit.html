@@ -4,326 +4,387 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Edit Cards & Settings</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap" rel="stylesheet">
   <style>
     body {
-      font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       margin: 0;
       padding: 20px;
-      background-color: #fafafa;
-      box-sizing: border-box;
-    }
-    h1 {
-      text-align: center;
-      font-size: 24px;
+      background-color: #f0f2f5;
+      color: #333;
     }
     .container {
       max-width: 800px;
       margin: 0 auto;
     }
-    table {
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 25px;
+    }
+    h1 {
+      font-weight: 600;
+      color: #333;
+      margin: 0;
+      font-size: 28px;
+    }
+    .back-link {
+      font-size: 32px;
+      color: #555;
+      text-decoration: none;
+      transition: color 0.2s;
+      line-height: 1; /* Ensures icon is vertically centered */
+    }
+    .back-link:hover {
+        color: #e74c3c; /* Changed hover color to red to match "close" action */
+    }
+
+    /* Card-style sections */
+    .settings-card {
+      background-color: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      padding: 25px;
+      margin-bottom: 25px;
+    }
+    .settings-card h2 {
+      margin-top: 0;
+      margin-bottom: 20px;
+      text-align: center;
+      font-weight: 500;
+      color: #555;
+    }
+
+    /* Form Styles */
+    .form-group {
+      margin-bottom: 15px;
+    }
+    .form-group input,
+    .form-group textarea {
       width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
-    }
-    th, td {
-      padding: 10px;
+      padding: 12px;
       border: 1px solid #ccc;
-      text-align: center;
-    }
-    button {
-      padding: 6px 12px;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    .delete { background-color: #e74c3c; color: white; }
-    .add-section {
-      margin-top: 20px;
-      text-align: center;
-      padding: 15px;
-      border: 1px solid #ddd;
       border-radius: 8px;
-    }
-    .add-section textarea {
+      box-sizing: border-box;
       font-size: 16px;
-      padding: 5px;
-      width: 90%;
-      max-width: 300px;
-      height: 80px;
-      resize: vertical;
-      vertical-align: top;
-      margin-bottom: 10px;
     }
-    .add-section button {
-      background-color: #1e90ff; color: white; padding: 10px 15px;
+    .form-group textarea {
+        min-height: 100px;
+        resize: vertical;
     }
-    .back-btn {
-      display: inline-block; margin-bottom: 20px; background-color: #555;
-      color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px;
+    .status-message {
+      text-align: center;
+      margin-top: 15px;
+      font-size: 14px;
+      font-weight: 500;
+      height: 20px;
     }
     
-    th[onclick] {
-        cursor: pointer;
-        position: relative;
+    /* Button Styles */
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 12px 15px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 600;
+      color: #fff;
+      transition: opacity 0.2s;
     }
-    th[onclick]:hover {
-        background-color: #f0f0f0;
+    .btn:hover { opacity: 0.85; }
+    .btn-green { background-color: #2ecc71; }
+    .btn-blue { background-color: #3498db; }
+    .btn-red { 
+        background-color: #e74c3c; 
+        padding: 5px 12px;
+        font-size: 14px;
     }
-    th[onclick].sort-asc::after,
-    th[onclick].sort-desc::after {
-        content: '';
-        font-size: 0.8em;
-        padding-left: 5px;
-        position: absolute;
-        right: 10px;
-    }
-    th[onclick].sort-asc::after { content: '▲'; }
-    th[onclick].sort-desc::after { content: '▼'; }
 
-    .cloud-sync {
-        margin: 20px 0; padding: 15px; border: 1px solid #1e90ff;
-        border-radius: 8px; display: flex; flex-direction: column;
-        gap: 10px;
+    /* Table Styles */
+    .table-container {
+        overflow-x: auto;
     }
-    .cloud-sync h2 { margin: 0 0 10px 0; font-size: 18px; text-align: center; }
-    .cloud-sync input {
-        padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%;
-        box-sizing: border-box;
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        background-color: #fff;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        overflow: hidden;
     }
-    .cloud-sync button { background-color: #2ecc71; color: white; padding: 10px; }
-    #syncStatus { font-size: 14px; text-align: center; }
-
-    @media (max-width: 600px) {
-      body { padding: 10px; }
-      #cardTable thead { display: none; }
-      #cardTable tr {
-        display: block; margin-bottom: 15px; border: 1px solid #ddd;
-        border-radius: 5px; padding: 10px;
-      }
-      #cardTable td {
-        display: block; text-align: right; position: relative; padding-left: 50%;
-        border: none; border-bottom: 1px solid #eee;
-      }
-      #cardTable td:last-child { border-bottom: none; }
-      #cardTable td::before {
-        content: attr(data-label); position: absolute; left: 10px;
-        width: calc(50% - 20px); padding-right: 10px; font-weight: bold;
+    th, td {
+        padding: 15px;
         text-align: left;
-      }
+        border-bottom: 1px solid #f0f0f0;
     }
+    thead th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+        color: #555;
+    }
+    tbody tr:last-child td {
+        border-bottom: none;
+    }
+    tbody tr:hover {
+        background-color: #f5f5f5;
+    }
+    .char-cell {
+        font-family: "Noto Serif TC", "Microsoft JhengHei", sans-serif;
+        font-size: 20px;
+        font-weight: bold;
+    }
+    th.sortable {
+        cursor: pointer;
+        user-select: none;
+    }
+    th.sortable:hover {
+        background-color: #efefef;
+    }
+    .action-cell {
+        text-align: center;
+    }
+
   </style>
 </head>
 <body>
-<div class="container">
-  <a href="index.html" class="back-btn">← Back to Main</a>
-  <h1>Edit Cards & Settings</h1>
 
-  <div class="cloud-sync">
+  <div class="container">
+    <div class="header">
+        <h1>Edit Cards & Settings</h1>
+        <!-- MODIFIED: Changed icon to ti-x -->
+        <a href="index.html" class="back-link" aria-label="Back to Main"><i class="ti ti-x"></i></a>
+    </div>
+
+    <div class="settings-card">
       <h2>GitHub Gist Sync</h2>
-      <input type="password" id="accessToken" placeholder="GitHub Personal Access Token">
-      <input type="text" id="gistId" placeholder="Gist ID">
-      <button onclick="setupSync()">Save & Connect</button>
-      <span id="syncStatus">Enter your credentials to enable cloud sync.</span>
-  </div>
-
-  <div class="add-section">
-    <textarea id="newChars" placeholder="Enter characters to add or reset here"></textarea>
-    <button onclick="addChars()">Bulk Add / Reset</button>
-  </div>
-
-  <table id="cardTable">
-    <thead>
-      <tr>
-        <th id="th-char" onclick="sortTable('char')">Character</th>
-        <th id="th-interval" onclick="sortTable('interval')">Interval</th>
-        <th id="th-ease" onclick="sortTable('ease')">Ease</th>
-        <th id="th-due" onclick="sortTable('due')">Next Review</th>
-        <th>Action</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
-</div>
-  <script>
-    let cards = {};
-    let sortKey = 'char';
-    let sortDirection = 'asc';
+      <div class="form-group">
+        <input type="password" id="accessToken" placeholder="GitHub Personal Access Token">
+      </div>
+      <div class="form-group">
+        <input type="text" id="gistId" placeholder="Gist ID">
+      </div>
+      <button class="btn btn-green" onclick="saveCredentials()">Save & Connect</button>
+      <p id="sync-status" class="status-message"></p>
+    </div>
     
-    const GIST_API_BASE = 'https://api.github.com/gists/';
-    const GIST_FILENAME = 'progress.json';
-    let accessToken = '';
-    let gistId = '';
+    <div class="settings-card">
+      <div class="form-group">
+        <textarea id="bulk-add-text" placeholder="Enter characters to add or reset here"></textarea>
+      </div>
+      <button class="btn btn-blue" onclick="handleBulkAdd()">Bulk Add / Reset</button>
+    </div>
 
-    function updateSyncStatus(message, isError = false) {
-      const statusEl = document.getElementById('syncStatus');
-      statusEl.textContent = message;
-      statusEl.style.color = isError ? '#e74c3c' : '#2c3e50';
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th id="sort-char" class="sortable" onclick="sortTable('char')">Character ▲</th>
+            <th id="sort-interval" class="sortable" onclick="sortTable('interval')">Interval</th>
+            <th class="action-cell">Action</th>
+          </tr>
+        </thead>
+        <tbody id="card-list-body">
+          <!-- Table rows will be rendered here by JavaScript -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const GIST_FILENAME = 'progress.json';
+    const GIST_API_BASE = 'https://api.github.com/gists/';
+    let cards = {};
+    let sortState = { column: 'char', direction: 'asc' };
+
+    function formatInterval(minutes) {
+      if (minutes < 1) return 'New';
+      if (minutes < 60) return `${Math.round(minutes)}m`;
+      const hours = minutes / 60;
+      return hours < 24 ? `${Math.round(hours)}h` : `${Math.round(hours / 24)}d`;
     }
 
-    async function setupSync() {
-      const tokenInput = document.getElementById('accessToken').value;
-      const gistIdInput = document.getElementById('gistId').value;
-      if (!tokenInput || !gistIdInput) {
-        return alert('Please provide both GitHub Access Token and Gist ID.');
+    function renderCardTable() {
+      const tbody = document.getElementById('card-list-body');
+      tbody.innerHTML = ''; 
+
+      const cardArray = Object.values(cards);
+
+      cardArray.sort((a, b) => {
+          let valA, valB;
+          if (sortState.column === 'char') {
+              valA = a.char;
+              valB = b.char;
+          } else if (sortState.column === 'interval') {
+              valA = a.interval;
+              valB = b.interval;
+          }
+          
+          if (valA < valB) return sortState.direction === 'asc' ? -1 : 1;
+          if (valA > valB) return sortState.direction === 'asc' ? 1 : -1;
+          return 0;
+      });
+
+      if (cardArray.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 20px;">No cards in your deck yet.</td></tr>';
+        return;
       }
-      accessToken = tokenInput;
-      gistId = gistIdInput;
-      localStorage.setItem('ankiAccessToken', accessToken);
-      localStorage.setItem('ankiGistId', gistId);
-      
-      updateSyncStatus('Testing connection...', false);
-      await loadProgress();
-      renderTable();
+
+      cardArray.forEach(card => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td class="char-cell">${card.char}</td>
+          <td>${formatInterval(card.interval)}</td>
+          <td class="action-cell">
+            <button class="btn btn-red" onclick="deleteCard('${card.char}')">Delete</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function sortTable(column) {
+        if (sortState.column === column) {
+            sortState.direction = sortState.direction === 'asc' ? 'desc' : 'asc';
+        } else {
+            sortState.column = column;
+            sortState.direction = 'asc';
+        }
+        
+        document.querySelectorAll('th.sortable').forEach(th => th.innerText = th.innerText.replace(' ▲', '').replace(' ▼', ''));
+        const currentHeader = document.getElementById(`sort-${column}`);
+        currentHeader.innerText += sortState.direction === 'asc' ? ' ▲' : ' ▼';
+        
+        renderCardTable();
+    }
+    
+    function deleteCard(char) {
+      if (confirm(`Are you sure you want to delete the character "${char}"?`)) {
+        delete cards[char];
+        saveProgress();
+        renderCardTable();
+      }
+    }
+
+    function handleBulkAdd() {
+        const text = document.getElementById('bulk-add-text').value;
+        if (!text.trim()) {
+            alert('Text area is empty.');
+            return;
+        }
+
+        // MODIFIED: Removed the confirm() dialog
+        const chars = text.split('');
+        let addedCount = 0;
+        let resetCount = 0;
+        
+        chars.forEach(char => {
+            if (char.trim().length !== 1 || !/\p{Script=Han}/u.test(char)) return;
+
+            if (cards[char]) {
+                resetCount++;
+            } else {
+                addedCount++;
+            }
+            cards[char] = { char: char, interval: 0, ease: 250, due: Date.now() };
+        });
+        
+        saveProgress();
+        renderCardTable();
+        alert(`Process complete.\nNew cards added: ${addedCount}\nExisting cards reset: ${resetCount}`);
+        document.getElementById('bulk-add-text').value = '';
+    }
+
+    async function saveCredentials() {
+      const token = document.getElementById('accessToken').value.trim();
+      const id = document.getElementById('gistId').value.trim();
+      localStorage.setItem('ankiAccessToken', token);
+      localStorage.setItem('ankiGistId', id);
+      await updateSyncStatus();
     }
 
     function loadCredentials() {
-      accessToken = localStorage.getItem('ankiAccessToken') || '';
-      gistId = localStorage.getItem('ankiGistId') || '';
-      if (accessToken && gistId) {
-        document.getElementById('accessToken').value = accessToken;
-        document.getElementById('gistId').value = gistId;
-      }
+      document.getElementById('accessToken').value = localStorage.getItem('ankiAccessToken') || '';
+      document.getElementById('gistId').value = localStorage.getItem('ankiGistId') || '';
     }
 
-    async function saveToCloud() {
-      if (!accessToken || !gistId) return;
-      try {
-        const response = await fetch(`${GIST_API_BASE}${gistId}`, {
-          method: 'PATCH',
-          headers: {
-            'Authorization': `token ${accessToken}`, 'Accept': 'application/vnd.github.v3+json',
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ files: { [GIST_FILENAME]: { content: JSON.stringify(cards, null, 2) } } })
-        });
-        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-      } catch (error) {
-        console.error('Failed to save to Gist:', error);
-        alert('Cloud sync failed. Changes might not be saved.');
-      }
-    }
-
-    async function loadFromCloud() {
-      if (!accessToken || !gistId) return false;
-      try {
-        const response = await fetch(`${GIST_API_BASE}${gistId}`, {
-          method: 'GET',
-          headers: { 'Authorization': `token ${accessToken}`, 'Accept': 'application/vnd.github.v3+json' }
-        });
-        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-        const data = await response.json();
-        if (data.files && data.files[GIST_FILENAME]) {
-            const content = data.files[GIST_FILENAME].content;
-            cards = content ? JSON.parse(content) : {};
+    async function updateSyncStatus() {
+        const statusEl = document.getElementById('sync-status');
+        const token = localStorage.getItem('ankiAccessToken');
+        const id = localStorage.getItem('ankiGistId');
+        
+        if (!token || !id) {
+            statusEl.textContent = 'Please provide Token and Gist ID.';
+            statusEl.style.color = '#f39c12';
+            return;
         }
-        updateSyncStatus('Successfully connected to Gist.', false);
-        return true;
-      } catch (error) {
-        console.error('Failed to load from Gist:', error);
-        updateSyncStatus('Connection Failed. Check Token/ID or Gist file.', true);
-        return false;
+
+        try {
+            const response = await fetch(`${GIST_API_BASE}${id}`, {
+                method: 'GET',
+                headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
+            });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            statusEl.textContent = 'Successfully connected to Gist.';
+            statusEl.style.color = '#2ecc71';
+        } catch (error) {
+            statusEl.textContent = `Connection failed: ${error.message}`;
+            statusEl.style.color = '#e74c3c';
+        }
+    }
+
+    async function saveProgress() {
+      const token = localStorage.getItem('ankiAccessToken');
+      const id = localStorage.getItem('ankiGistId');
+      if (token && id) {
+        try {
+          await fetch(`${GIST_API_BASE}${id}`, {
+            method: 'PATCH',
+            headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ files: { [GIST_FILENAME]: { content: JSON.stringify(cards) } } })
+          });
+        } catch (error) {
+          console.error('Failed to save to Gist:', error);
+          alert('Failed to sync with Gist. Changes saved locally for now.');
+        }
       }
+      localStorage.setItem("ankiCards", JSON.stringify(cards));
     }
 
     async function loadProgress() {
-      const cloudSuccess = await loadFromCloud();
-      if (!cloudSuccess) {
-        const saved = localStorage.getItem("ankiCards");
-        if (saved) cards = JSON.parse(saved);
-        updateSyncStatus('Using local save. Connect to GitHub Gist to enable cloud sync.', true);
-      }
-    }
-
-    function saveProgress() {
-      if (accessToken && gistId) {
-        saveToCloud();
-      } else {
-        localStorage.setItem("ankiCards", JSON.stringify(cards));
-      }
-    }
-
-    function formatInterval(minutes) {
-      if (minutes < 60) return `${Math.max(1, Math.round(minutes))}m`;
-      const hours = minutes / 60;
-      if (hours < 24) return `${Math.round(hours)}h`;
-      return `${Math.round(hours / 24)}d`;
-    }
-
-    function renderTable() {
-      document.querySelectorAll('th[onclick]').forEach(th => {
-        th.classList.remove('sort-asc', 'sort-desc');
-      });
-      const activeHeader = document.getElementById(`th-${sortKey}`);
-      if (activeHeader) {
-        activeHeader.classList.add(sortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
-      }
-      const tbody = document.querySelector("#cardTable tbody");
-      tbody.innerHTML = "";
-      const sortedCards = Object.values(cards).sort((a, b) => {
-        let valA = a[sortKey], valB = b[sortKey];
-        if (['interval', 'ease', 'due'].includes(sortKey)) {
-            valA = Number(valA); valB = Number(valB);
+      const token = localStorage.getItem('ankiAccessToken');
+      const id = localStorage.getItem('ankiGistId');
+      if (token && id) {
+        try {
+          const response = await fetch(`${GIST_API_BASE}${id}`, {
+            headers: { 'Authorization': `token ${token}` }
+          });
+          if (!response.ok) throw new Error();
+          const data = await response.json();
+          if (data.files && data.files[GIST_FILENAME] && data.files[GIST_FILENAME].content) {
+            cards = JSON.parse(data.files[GIST_FILENAME].content);
+            return;
+          }
+        } catch (error) {
+          console.error('Failed to load from Gist, falling back to local.');
         }
-        if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
-        if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
-        return 0;
-      });
-      sortedCards.forEach(card => {
-        const tr = document.createElement("tr");
-        const dueDate = new Date(card.due);
-        tr.innerHTML = `
-          <td data-label="Character">${card.char}</td>
-          <td data-label="Interval">${Math.round(card.interval)} (${formatInterval(card.interval)})</td>
-          <td data-label="Ease">${Math.round(card.ease)}%</td>
-          <td data-label="Next Review">${dueDate.toLocaleString()}</td>
-          <td data-label="Action"><button class="delete" onclick="deleteChar('${card.char}')">Delete</button></td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    function sortTable(key) {
-        sortDirection = (sortKey === key && sortDirection === 'asc') ? 'desc' : 'asc';
-        sortKey = key;
-        renderTable();
-    }
-
-    function deleteChar(ch) {
-      if (confirm(`Are you sure you want to delete '${ch}'? This action cannot be undone.`)) {
-        delete cards[ch];
-        saveProgress();
-        renderTable();
       }
+      cards = JSON.parse(localStorage.getItem("ankiCards") || '{}');
     }
 
-    function addChars() {
-      const textarea = document.getElementById("newChars");
-      const text = textarea.value.trim();
-      if (!text) return alert("Please enter characters to process.");
-      const uniqueChars = [...new Set(text.split('').filter(c => c.trim()))];
-      let addedCount = 0, resetCount = 0;
-      uniqueChars.forEach(ch => {
-        if (cards[ch]) resetCount++; else addedCount++;
-        cards[ch] = { char: ch, interval: 0, ease: 250, due: Date.now() };
-      });
-      if (addedCount > 0 || resetCount > 0) {
-        saveProgress();
-        renderTable();
-        let msg = [];
-        if (addedCount > 0) msg.push(`Added ${addedCount} new character(s)`);
-        if (resetCount > 0) msg.push(`Reset ${resetCount} existing character(s)`);
-        alert(`Success: ${msg.join(', ')}.`);
-        textarea.value = "";
-      } else {
-        alert("No valid characters were entered.");
-      }
-    }
-
-    (async () => {
+    async function initializePage() {
       loadCredentials();
+      await updateSyncStatus();
       await loadProgress();
-      renderTable();
-    })();
+      renderCardTable();
+    }
+
+    document.addEventListener('DOMContentLoaded', initializePage);
   </script>
 </body>
 </html>
