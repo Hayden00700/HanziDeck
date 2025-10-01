@@ -5,6 +5,8 @@ let isPracticeVisible = false;
 const synth = window.speechSynthesis;
 let practiceHanziWriter = null;
 let chineseVoicePromise = null;
+let saveTimeout = null;
+const SAVE_DEBOUNCE_DELAY = 1500;
 
 // --- NEW: For conflict detection ---
 let lastKnownETag = null;
@@ -273,19 +275,28 @@ function formatInterval(minutes) {
 }
 
 // MODIFIED: Handles new data format for local storage fallback
-async function saveProgress() {
-  if (accessToken && gistId) { 
-    await saveToCloud(); 
-  } else {
-    const base_time_ms = Date.now();
-    const cardsWithOffsets = {};
-    for (const char in cards) {
-        const data = cards[char];
-        const offsetMinutes = Math.round((data[DUE] - base_time_ms) / 60000);
-        cardsWithOffsets[char] = [data[INTERVAL], data[EASE], offsetMinutes];
-    }
-    localStorage.setItem("ankiCards", JSON.stringify({ base_time_ms, cards: cardsWithOffsets }));
+function saveProgress() {
+  // Clear any existing timer to reset the debounce period
+  if (saveTimeout) {
+    clearTimeout(saveTimeout);
   }
+
+  // Set a new timer to execute the save operation after the delay
+  saveTimeout = setTimeout(async () => {
+    if (accessToken && gistId) { 
+      await saveToCloud(); 
+    } else {
+      // Also debounce local saving
+      const base_time_ms = Date.now();
+      const cardsWithOffsets = {};
+      for (const char in cards) {
+          const data = cards[char];
+          const offsetMinutes = Math.round((data[DUE] - base_time_ms) / 60000);
+          cardsWithOffsets[char] = [data[INTERVAL], data[EASE], offsetMinutes];
+      }
+      localStorage.setItem("ankiCards", JSON.stringify({ base_time_ms, cards: cardsWithOffsets }));
+    }
+  }, SAVE_DEBOUNCE_DELAY);
 }
 
 // MODIFIED: Handles new data format for local storage
