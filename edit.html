@@ -95,15 +95,19 @@
       font-size: 16px;
       font-weight: 600;
       color: #fff;
-      transition: opacity 0.2s;
+      transition: background-color 0.2s, opacity 0.2s;
     }
     .btn:hover { opacity: 0.85; }
     .btn-green { background-color: #2ecc71; }
     .btn-blue { background-color: #3498db; }
     .btn-red { 
-        background-color: #e74c3c; 
+        background-color: #e74c3c;
+    }
+    .btn-small {
         padding: 5px 12px;
         font-size: 14px;
+        width: auto; /* Overrides .btn width */
+        display: inline-block; /* Overrides .btn display */
     }
 
     /* Table Styles */
@@ -162,17 +166,28 @@
 
     <div class="settings-card">
       <h2>GitHub Gist Sync</h2>
-      <div class="form-group">
-        <input type="password" id="accessToken" placeholder="GitHub Personal Access Token">
+      
+      <!-- Form shown when not connected -->
+      <div id="credentials-form">
+        <div class="form-group">
+          <input type="password" id="accessToken" placeholder="GitHub Personal Access Token">
+        </div>
+        <div class="form-group">
+          <input type="text" id="gistId" placeholder="Gist ID">
+        </div>
+        <button class="btn btn-green" onclick="saveCredentials()">Save & Connect</button>
       </div>
-      <div class="form-group">
-        <input type="text" id="gistId" placeholder="Gist ID">
+
+      <!-- View shown when connected -->
+      <div id="connected-view" style="display: none;">
+        <button class="btn btn-red" onclick="disconnect()">Disconnect from Gist</button>
       </div>
-      <button class="btn btn-green" onclick="saveCredentials()">Save & Connect</button>
+
       <p id="sync-status" class="status-message"></p>
     </div>
     
     <div class="settings-card">
+      <h2>Bulk Operations</h2>
       <div class="form-group">
         <textarea id="bulk-add-text" placeholder="Enter characters to add or reset here"></textarea>
       </div>

@@ -13,12 +13,10 @@ function formatInterval(minutes) {
   return hours < 24 ? `${Math.round(hours)}h` : `${Math.round(hours / 24)}d`;
 }
 
-// MODIFIED: Updated to handle new data structure
 function renderCardTable() {
   const tbody = document.getElementById('card-list-body');
   tbody.innerHTML = ''; 
 
-  // Convert entries to an array of objects for easier sorting/rendering
   const cardArray = Object.entries(cards).map(([char, data]) => ({
     char: char,
     data: data
@@ -30,8 +28,8 @@ function renderCardTable() {
           valA = a.char;
           valB = b.char;
       } else if (sortState.column === 'interval') {
-          valA = a.data[INTERVAL]; // Use array index
-          valB = b.data[INTERVAL]; // Use array index
+          valA = a.data[INTERVAL];
+          valB = b.data[INTERVAL];
       }
       
       if (valA < valB) return sortState.direction === 'asc' ? -1 : 1;
@@ -48,9 +46,9 @@ function renderCardTable() {
     const row = document.createElement('tr');
     row.innerHTML = `
       <td class="char-cell">${card.char}</td>
-      <td>${formatInterval(card.data[INTERVAL])}</td> <!-- Use array index -->
+      <td>${formatInterval(card.data[INTERVAL])}</td>
       <td class="action-cell">
-        <button class="btn btn-red" onclick="deleteCard('${card.char}')">Delete</button>
+        <button class="btn btn-red btn-small" onclick="deleteCard('${card.char}')">Delete</button>
       </td>
     `;
     tbody.appendChild(row);
@@ -99,8 +97,7 @@ function handleBulkAdd() {
         } else {
             addedCount++;
         }
-        // MODIFIED: Create card in new array format
-        cards[char] = [0, 250, Date.now()]; // [interval, ease, due]
+        cards[char] = [0, 250, Date.now()];
     });
     
     saveProgress();
@@ -109,27 +106,56 @@ function handleBulkAdd() {
     document.getElementById('bulk-add-text').value = '';
 }
 
-// ... All functions from saveCredentials onwards are unchanged ...
 async function saveCredentials() {
   const token = document.getElementById('accessToken').value.trim();
   const id = document.getElementById('gistId').value.trim();
+  if (!token || !id) {
+    alert('Please provide both a Personal Access Token and a Gist ID.');
+    return;
+  }
   localStorage.setItem('ankiAccessToken', token);
   localStorage.setItem('ankiGistId', id);
   await updateSyncStatus();
 }
+
 function loadCredentials() {
   document.getElementById('accessToken').value = localStorage.getItem('ankiAccessToken') || '';
   document.getElementById('gistId').value = localStorage.getItem('ankiGistId') || '';
 }
+
+// --- NEW: Disconnects from Gist and resets the UI ---
+function disconnect() {
+  if (confirm('Are you sure you want to disconnect from GitHub Gist? Your progress will no longer be synced.')) {
+    localStorage.removeItem('ankiAccessToken');
+    localStorage.removeItem('ankiGistId');
+    loadCredentials(); // Clear the input fields
+    updateSyncStatus(); // Refresh the UI to show the form
+  }
+}
+
+// --- MODIFIED: Now also handles showing/hiding the connection UI ---
 async function updateSyncStatus() {
     const statusEl = document.getElementById('sync-status');
+    const formEl = document.getElementById('credentials-form');
+    const connectedEl = document.getElementById('connected-view');
+    
     const token = localStorage.getItem('ankiAccessToken');
     const id = localStorage.getItem('ankiGistId');
+
     if (!token || !id) {
         statusEl.textContent = 'Please provide Token and Gist ID.';
         statusEl.style.color = '#f39c12';
+        formEl.style.display = 'block';
+        connectedEl.style.display = 'none';
         return;
     }
+
+    // Credentials exist, so show the 'connected' view and test them
+    formEl.style.display = 'none';
+    connectedEl.style.display = 'block';
+    statusEl.textContent = 'Connecting...';
+    statusEl.style.color = '#555'; // Neutral color for "connecting"
+
     try {
         const response = await fetch(`${GIST_API_BASE}${id}`, {
             method: 'GET',
@@ -143,11 +169,11 @@ async function updateSyncStatus() {
         statusEl.style.color = '#e74c3c';
     }
 }
-// MODIFIED: Saves data in the new space-efficient format
+
 async function saveProgress() {
   const token = localStorage.getItem('ankiAccessToken');
   const id = localStorage.getItem('ankiGistId');
-
+  
   const base_time_ms = Date.now();
   const cardsWithOffsets = {};
   for (const char in cards) {
@@ -172,12 +198,10 @@ async function saveProgress() {
   localStorage.setItem("ankiCards", contentToSave);
 }
 
-// MODIFIED: Loads and processes both old and new data formats
 async function loadProgress() {
   const token = localStorage.getItem('ankiAccessToken');
   const id = localStorage.getItem('ankiGistId');
   let dataLoaded = false;
-
   if (token && id) {
     try {
       const response = await fetch(`${GIST_API_BASE}${id}`, { headers: { 'Authorization': `token ${token}` } });
@@ -186,7 +210,6 @@ async function loadProgress() {
       if (data.files && data.files[GIST_FILENAME] && data.files[GIST_FILENAME].content) {
         const parsedData = JSON.parse(data.files[GIST_FILENAME].content);
         if (parsedData && parsedData.base_time_ms && parsedData.cards) {
-            // New format
             const baseTime = parsedData.base_time_ms;
             const loadedCards = parsedData.cards;
             const processedCards = {};
@@ -197,7 +220,6 @@ async function loadProgress() {
             }
             cards = processedCards;
         } else {
-            // Old format
             cards = parsedData || {};
         }
         dataLoaded = true;
@@ -210,7 +232,6 @@ async function loadProgress() {
       if (localData) {
           const parsedData = JSON.parse(localData);
           if (parsedData && parsedData.base_time_ms && parsedData.cards) {
-              // New format
               const baseTime = parsedData.base_time_ms;
               const loadedCards = parsedData.cards;
               const processedCards = {};
@@ -221,7 +242,6 @@ async function loadProgress() {
               }
               cards = processedCards;
           } else {
-              // Old format
               cards = parsedData || {};
           }
       } else {
