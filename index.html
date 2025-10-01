@@ -12,8 +12,6 @@
     :root {
       --char-size-desktop: 280px;
       --char-size-mobile: 220px;
-      --pinyin-size-desktop: 50px;
-      --pinyin-size-mobile: 36px;
     }
     html, body { height: 100%; width: 100%; overflow-x: hidden; }
     body {
@@ -59,11 +57,6 @@
       transition: opacity 0.3s ease-in-out;
     }
 
-    #pinyin-display {
-        font-size: var(--pinyin-size-desktop); color: #2c3e50; min-height: 60px;
-        margin-bottom: 5px; /* Reduced margin to move content up */
-        text-align: center;
-    }
     #char {
       font-size: var(--char-size-desktop); font-family: "Noto Serif TC", serif;
       display: flex; justify-content: center; align-items: center;
@@ -73,6 +66,7 @@
     #char-actions {
         display: flex;
         gap: 30px;
+        margin-top: 10px; /* Added margin */
     }
     #speak-btn, #stroke-btn {
       background: none; border: none; color: #333; font-size: 40px;
@@ -91,6 +85,47 @@
     .again { background-color: #e74c3c; } .hard { background-color: #f39c12; }
     .good { background-color: #2ecc71; } .easy { background-color: #3498db; }
     
+    #definitions-container {
+      max-width: 600px;
+      width: 95%;
+      margin-top: 10px;
+      padding: 5px 15px;
+      background-color: #f8f9fa;
+      border: 1px solid #e9ecef;
+      border-radius: 8px;
+      text-align: left;
+      font-size: 16px;
+      line-height: 1.7;
+      max-height: 40vh; /* Increased max-height */
+      overflow-y: auto;
+      display: none;
+    }
+    #definitions-container h4 {
+      margin: 10px 0 5px 0;
+      font-size: 24px;
+      font-weight: normal;
+      color: #1e90ff;
+      border-bottom: 1px solid #dee2e6;
+      padding-bottom: 5px;
+    }
+    #definitions-container ol {
+      padding-left: 25px;
+      margin: 0;
+    }
+    #definitions-container li {
+      margin-bottom: 12px;
+    }
+    #definitions-container .part-of-speech {
+      font-weight: bold;
+      color: #343a40;
+    }
+    #definitions-container .example {
+      color: #6c757d;
+      font-style: italic;
+      margin-top: 5px;
+      display: block;
+    }
+
     #practice-container {
       display: none;
       flex-direction: row;
@@ -132,7 +167,6 @@
       #search-btn, #edit-btn {
         font-size: 24px;
       }
-      #pinyin-display { font-size: var(--pinyin-size-mobile); min-height: 40px; }
       #char {
         font-size: var(--char-size-mobile);
         min-width: 280px;
@@ -162,7 +196,7 @@
   
   <div class="main-content">
     <div id="char">Loading...</div>
-    <div id="pinyin-display"></div>
+    <div id="definitions-container"></div>
     <div id="char-actions">
         <button id="speak-btn" onclick="speakCharacter()" aria-label="Speak"><i class="bi bi-volume-up-fill"></i></button>
         <button id="stroke-btn" onclick="showStrokeOrder()" aria-label="Show Stroke Order & Practice"><i class="bi bi-pen-fill"></i></button>
@@ -288,7 +322,8 @@
         
         currentCard = foundCard;
         document.getElementById("char").innerHTML = currentCard.char;
-        document.getElementById('pinyin-display').textContent = '';
+        document.getElementById('definitions-container').style.display = 'none';
+        document.getElementById('definitions-container').innerHTML = '';
         document.getElementById('char').style.display = 'flex';
         document.getElementById('practice-container').style.display = 'none';
         footerControls.style.display = 'flex';
@@ -364,18 +399,57 @@
     if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = setChineseVoice;
     setChineseVoice();
     
-    async function fetchZhuyin(char) {
-        document.getElementById('pinyin-display').textContent = '...';
+    function renderDefinitions(data) {
+        const container = document.getElementById('definitions-container');
+        container.innerHTML = '';
+
+        if (!data || !data.heteronyms) return;
+
+        let content = '';
+        data.heteronyms.forEach(h => {
+            if (!h.definitions || h.definitions.length === 0) return;
+
+            content += `<h4>${h.bopomofo}</h4>`;
+            content += `<ol>`;
+            h.definitions.forEach(def => {
+                content += `<li>`;
+                if (def.type) content += `<span class="part-of-speech">[${def.type}]</span> `;
+                content += def.def;
+
+                if (def.example && def.example.length > 0) {
+                    def.example.forEach(ex => { content += `<span class="example">例：${ex}</span>`; });
+                }
+                if (def.quote && def.quote.length > 0) {
+                    def.quote.forEach(q => { content += `<span class="example">引：${q}</span>`; });
+                }
+                content += `</li>`;
+            });
+            content += `</ol>`;
+        });
+
+        if (content) {
+            container.innerHTML = content;
+            container.style.display = 'block';
+        } else {
+            container.style.display = 'none';
+        }
+    }
+    
+    async function fetchAndDisplayDetails(char) {
+        const container = document.getElementById('definitions-container');
+        container.innerHTML = '<h4>Loading...</h4>';
+        container.style.display = 'block';
+
         try {
-            if (!char) return 'Character missing';
+            if (!char) { container.innerHTML = '<h4>Character missing</h4>'; return; }
             const resp = await fetch(MOEDICT_API_BASE + encodeURIComponent(char));
-            if (!resp.ok) return `API Error: HTTP ${resp.status}`;
+            if (!resp.ok) { container.innerHTML = `<h4>API Error: HTTP ${resp.status}</h4>`; return; }
+            
             const data = await resp.json();
-            const bopos = [...new Set(data.heteronyms.map(h => h.bopomofo).filter(Boolean))];
-            return bopos.length > 0 ? bopos.join(' / ') : 'No pronunciation data found.';
+            renderDefinitions(data);
         } catch (error) { 
             console.error("Moedict API failed:", error); 
-            return `API call failed: ${error.message}`;
+            container.innerHTML = `<h4>API call failed</h4>`;
         }
     }
 
@@ -387,11 +461,9 @@
         utterance.lang = 'zh-TW';
         utterance.rate = 0.8;
         synth.speak(utterance);
+        
         if (!isStrokeVisible) {
-            fetchZhuyin(currentCard.char)
-                .then(zhuyin => {
-                    document.getElementById('pinyin-display').textContent = zhuyin;
-                });
+            fetchAndDisplayDetails(currentCard.char);
         }
     }
     
@@ -401,6 +473,7 @@
         const charElement = document.getElementById('char');
         const practiceContainer = document.getElementById('practice-container');
         const strokeBtn = document.getElementById('stroke-btn');
+        const definitionsEl = document.getElementById('definitions-container');
         if (!currentCard || !currentCard.char) return;
 
         if (isStrokeVisible) {
@@ -413,6 +486,7 @@
         } else {
             charElement.style.display = 'none';
             footerControls.style.display = 'none';
+            definitionsEl.style.display = 'none';
             const hex = charToHex(currentCard.char);
             if (!hex) {
               alert('Cannot get character Unicode.');
@@ -510,7 +584,9 @@
       footerControls.style.display = 'flex';
       isStrokeVisible = false;
       document.getElementById('stroke-btn').querySelector('i').className = 'bi bi-pen-fill';
-      document.getElementById('pinyin-display').textContent = '';
+      const definitionsEl = document.getElementById('definitions-container');
+      definitionsEl.style.display = 'none';
+      definitionsEl.innerHTML = '';
       
       const dueCards = Object.values(cards).filter(c => c.due <= Date.now());
       if (dueCards.length > 0) {
