@@ -16,9 +16,10 @@
     html, body { height: 100%; width: 100%; overflow-x: hidden; }
     body {
       display: flex; flex-direction: column;
-      justify-content: space-between;
+      /* removed justify-content to allow natural top alignment */
       align-items: center; margin: 0;
-      padding: 50px 10px 20px 10px;
+      /* Increased bottom padding to prevent content from hiding behind the fixed footer */
+      padding: 50px 10px 150px 10px;
       box-sizing: border-box; background-color: #fefefe;
       font-family: "Noto Serif TC", "Microsoft JhengHei", sans-serif;
     }
@@ -45,16 +46,30 @@
       color: #1e90ff;
     }
 
-    .main-content, .footer-controls {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        width: 100%;
-    }
     .main-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
       margin-top: 0;
       opacity: 0; 
       transition: opacity 0.3s ease-in-out;
+    }
+    
+    .footer-controls {
+      /* This is the key change to fix the button bar to the bottom */
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background-color: #fefefe;
+      padding: 10px 0 20px 0;
+      z-index: 100;
+      border-top: 1px solid #eee;
+      /* --- */
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
 
     #char {
@@ -66,7 +81,7 @@
     #char-actions {
         display: flex;
         gap: 30px;
-        margin-top: 10px; /* Added margin */
+        margin-top: 10px;
     }
     #speak-btn, #stroke-btn {
       background: none; border: none; color: #333; font-size: 40px;
@@ -74,7 +89,7 @@
     }
     #speak-btn:hover, #stroke-btn:hover { color: #1e90ff; }
     .buttons {
-      display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;
+      display: flex; gap: 10px; flex-wrap: wrap;
       justify-content: center;
     }
     button {
@@ -96,7 +111,7 @@
       text-align: left;
       font-size: 16px;
       line-height: 1.7;
-      max-height: 40vh; /* Increased max-height */
+      max-height: 40vh;
       overflow-y: auto;
       display: none;
     }
@@ -162,7 +177,7 @@
 
     @media (max-width: 768px) {
       body {
-        padding: 60px 10px 20px 10px;
+        padding: 60px 10px 120px 10px; /* Adjust padding for mobile */
       }
       #search-btn, #edit-btn {
         font-size: 24px;
