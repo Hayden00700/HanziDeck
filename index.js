@@ -5,10 +5,9 @@ let isPracticeVisible = false;
 const synth = window.speechSynthesis;
 let practiceHanziWriter = null;
 let chineseVoicePromise = null;
-let saveTimeout = null;
-const SAVE_DEBOUNCE_DELAY = 1500;
+// The timeout mechanism is now removed.
 
-// --- NEW: For conflict detection ---
+// ETag is no longer used for conflict checks.
 let lastKnownETag = null;
 
 const INTERVAL = 0, EASE = 1, DUE = 2;
@@ -25,7 +24,6 @@ let gistId = '';
 
 const footerControls = document.querySelector('.footer-controls');
 
-// ... searchForChar is unchanged ...
 function searchForChar() {
   const charToFindRaw = prompt("Enter a character to search for:");
   if (!charToFindRaw || charToFindRaw.trim().length !== 1) {
@@ -48,7 +46,7 @@ function searchForChar() {
   } else {
     if (confirm(`Character "${charToFind}" not found. Would you like to add it?`)) {
       cards[charToFind] = [0, 250, Date.now()];
-      saveProgress();
+      saveProgress(); // This now saves immediately
       updateStatus();
       alert(`Character "${charToFind}" has been added to your deck!`);
       if (isPracticeVisible) showStrokeOrder(); 
@@ -64,41 +62,35 @@ function searchForChar() {
     }
   }
 }
-// --- MODIFIED: Controls the status light color and tooltip ---
 function updateSyncStatus(status) {
   const statusEl = document.getElementById('sync-status-indicator');
-  statusEl.textContent = ''; // Ensure no text is displayed
+  statusEl.textContent = '';
 
   if (!accessToken || !gistId) {
-    statusEl.style.backgroundColor = '#f39c12'; // Yellow for local
+    statusEl.style.backgroundColor = '#f39c12';
     statusEl.title = 'Local Mode (Not Synced)';
     return;
   }
 
   switch (status) {
     case 'syncing':
-      statusEl.style.backgroundColor = '#f39c12'; // Yellow
+      statusEl.style.backgroundColor = '#f39c12';
       statusEl.title = 'Syncing...';
       break;
     case 'success':
-      statusEl.style.backgroundColor = '#2ecc71'; // Green
+      statusEl.style.backgroundColor = '#2ecc71';
       statusEl.title = 'Synced';
       break;
     case 'error':
-      statusEl.style.backgroundColor = '#e74c3c'; // Red
+      statusEl.style.backgroundColor = '#e74c3c';
       statusEl.title = 'Sync Failed';
       break;
-    case 'conflict':
-      statusEl.style.backgroundColor = '#e74c3c'; // Red
-      statusEl.title = 'Sync Conflict';
-      break;
     default:
-      statusEl.style.backgroundColor = '#2ecc71'; // Green
+      statusEl.style.backgroundColor = '#2ecc71';
       statusEl.title = 'Connected';
   }
 }
 
-// --- MODIFIED: Heavily updated with ETag conflict detection ---
 async function saveToCloud() {
   if (!accessToken || !gistId) return;
 
@@ -112,27 +104,19 @@ async function saveToCloud() {
   const contentToSave = JSON.stringify({ base_time_ms, cards: cardsWithOffsets });
 
   try {
-    const headResponse = await fetch(`${GIST_API_BASE}${gistId}`, {
-      method: 'HEAD',
-      headers: { 'Authorization': `token ${accessToken}`, 'Accept': 'application/vnd.github.v3+json' }
-    });
-    if (!headResponse.ok) throw new Error(`Failed to check remote status: ${headResponse.status}`);
-    
-    const currentRemoteETag = headResponse.headers.get('ETag');
-
-    if (lastKnownETag && currentRemoteETag !== lastKnownETag) {
-      alert("Sync Conflict!\n\nYour data on the cloud was updated by another device. To prevent data loss, this save has been cancelled.\n\nPlease reload the page to get the latest data.");
-      updateSyncStatus('conflict');
-      return; 
-    }
-
     const patchResponse = await fetch(`${GIST_API_BASE}${gistId}`, {
       method: 'PATCH',
-      headers: { 'Authorization': `token ${accessToken}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+      headers: { 
+        'Authorization': `token ${accessToken}`, 
+        'Accept': 'application/vnd.github.v3+json', 
+        'Content-Type': 'application/json' 
+      },
       body: JSON.stringify({ files: { [GIST_FILENAME]: { content: contentToSave } } })
     });
 
-    if (!patchResponse.ok) throw new Error(`HTTP error! Status: ${patchResponse.status}`);
+    if (!patchResponse.ok) {
+      throw new Error(`HTTP error! Status: ${patchResponse.status}`);
+    }
     
     lastKnownETag = patchResponse.headers.get('ETag');
     updateSyncStatus('success');
@@ -143,7 +127,6 @@ async function saveToCloud() {
   }
 }
 
-// --- MODIFIED: Now saves the ETag and handles new data format ---
 async function loadFromCloud() {
   if (!accessToken || !gistId) return false;
   try {
@@ -192,7 +175,6 @@ function loadCredentials() {
   gistId = localStorage.getItem('ankiGistId') || '';
 }
 
-// ... getChineseVoice and other display functions are unchanged ...
 function getChineseVoice() {
   if (chineseVoicePromise) { return chineseVoicePromise; }
   chineseVoicePromise = new Promise((resolve) => {
@@ -293,27 +275,24 @@ function formatInterval(minutes) {
   return hours < 24 ? `${Math.round(hours)}h` : `${Math.round(hours / 24)}d`;
 }
 
-function saveProgress() {
-  if (saveTimeout) {
-    clearTimeout(saveTimeout);
-  }
+// --- MODIFIED: Debounce mechanism REMOVED for immediate saving ---
+async function saveProgress() {
   if (accessToken && gistId) {
     updateSyncStatus('syncing');
-  }
-  saveTimeout = setTimeout(async () => {
-    if (accessToken && gistId) { 
-      await saveToCloud(); 
-    } else {
-      const base_time_ms = Date.now();
-      const cardsWithOffsets = {};
-      for (const char in cards) {
-          const data = cards[char];
-          const offsetMinutes = Math.round((data[DUE] - base_time_ms) / 60000);
-          cardsWithOffsets[char] = [data[INTERVAL], data[EASE], offsetMinutes];
-      }
-      localStorage.setItem("ankiCards", JSON.stringify({ base_time_ms, cards: cardsWithOffsets }));
+    // We use await here to ensure saveToCloud is called, but we don't
+    // need to block other functions on its completion.
+    await saveToCloud();
+  } else {
+    // Local save is synchronous and happens instantly.
+    const base_time_ms = Date.now();
+    const cardsWithOffsets = {};
+    for (const char in cards) {
+        const data = cards[char];
+        const offsetMinutes = Math.round((data[DUE] - base_time_ms) / 60000);
+        cardsWithOffsets[char] = [data[INTERVAL], data[EASE], offsetMinutes];
     }
-  }, SAVE_DEBOUNCE_DELAY);
+    localStorage.setItem("ankiCards", JSON.stringify({ base_time_ms, cards: cardsWithOffsets }));
+  }
 }
 
 async function loadProgress() {
@@ -378,7 +357,8 @@ async function initializeDeck() {
         newCards[char] = [ oldCard.interval || 0, oldCard.ease || 250, oldCard.due || Date.now() ];
       }
       cards = newCards;
-      await saveProgress();
+      // This save should also be immediate
+      saveProgress(); 
       console.log("Migration to array format complete.");
     }
   }
@@ -446,6 +426,7 @@ function showNextCard() {
   updateStatus(); 
   updateButtonLabels();
 }
+
 function rate(action) {
   if (!currentCard) return;
   const { interval, ease } = calculateNextState(currentCard.data, action);
@@ -453,7 +434,11 @@ function rate(action) {
   currentCard.data[EASE] = ease;
   currentCard.data[DUE] = Date.now() + minutesToMs(interval);
   cards[currentCard.char] = currentCard.data;
+  
+  // The 'await' keyword is not used here, allowing the UI to update instantly
+  // while the save operation runs in the background.
   saveProgress(); 
+  
   showNextCard();
 }
 
