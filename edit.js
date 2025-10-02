@@ -3,7 +3,6 @@ const GIST_API_BASE = 'https://api.github.com/gists/';
 let cards = {};
 let sortState = { column: 'char', direction: 'asc' };
 
-// --- NEW: Data structure indices for readability ---
 const INTERVAL = 0, EASE = 1, DUE = 2;
 
 function formatInterval(minutes) {
@@ -17,28 +16,19 @@ function renderCardTable() {
   const tbody = document.getElementById('card-list-body');
   tbody.innerHTML = ''; 
 
-  const cardArray = Object.entries(cards).map(([char, data]) => ({
-    char: char,
-    data: data
-  }));
+  const cardArray = Object.entries(cards).map(([char, data]) => ({ char: char, data: data }));
 
   cardArray.sort((a, b) => {
       let valA, valB;
-      if (sortState.column === 'char') {
-          valA = a.char;
-          valB = b.char;
-      } else if (sortState.column === 'interval') {
-          valA = a.data[INTERVAL];
-          valB = b.data[INTERVAL];
-      }
-      
+      if (sortState.column === 'char') valA = a.char, valB = b.char;
+      else if (sortState.column === 'interval') valA = a.data[INTERVAL], valB = b.data[INTERVAL];
       if (valA < valB) return sortState.direction === 'asc' ? -1 : 1;
       if (valA > valB) return sortState.direction === 'asc' ? 1 : -1;
       return 0;
   });
 
   if (cardArray.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 20px;">No cards in your deck yet.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 20px;">Your deck is empty.</td></tr>';
     return;
   }
 
@@ -62,11 +52,9 @@ function sortTable(column) {
         sortState.column = column;
         sortState.direction = 'asc';
     }
-    
     document.querySelectorAll('th.sortable').forEach(th => th.innerText = th.innerText.replace(' ▲', '').replace(' ▼', ''));
     const currentHeader = document.getElementById(`sort-${column}`);
     currentHeader.innerText += sortState.direction === 'asc' ? ' ▲' : ' ▼';
-    
     renderCardTable();
 }
 
@@ -84,22 +72,15 @@ function handleBulkAdd() {
         alert('Text area is empty.');
         return;
     }
-
     const chars = text.split('');
     let addedCount = 0;
     let resetCount = 0;
-    
     chars.forEach(char => {
         if (char.trim().length !== 1 || !/\p{Script=Han}/u.test(char)) return;
-
-        if (cards[char]) {
-            resetCount++;
-        } else {
-            addedCount++;
-        }
+        if (cards[char]) resetCount++;
+        else addedCount++;
         cards[char] = [0, 250, Date.now()];
     });
-    
     saveProgress();
     renderCardTable();
     alert(`Process complete.\nNew cards added: ${addedCount}\nExisting cards reset: ${resetCount}`);
@@ -123,22 +104,19 @@ function loadCredentials() {
   document.getElementById('gistId').value = localStorage.getItem('ankiGistId') || '';
 }
 
-// --- NEW: Disconnects from Gist and resets the UI ---
 function disconnect() {
   if (confirm('Are you sure you want to disconnect from GitHub Gist? Your progress will no longer be synced.')) {
     localStorage.removeItem('ankiAccessToken');
     localStorage.removeItem('ankiGistId');
-    loadCredentials(); // Clear the input fields
-    updateSyncStatus(); // Refresh the UI to show the form
+    loadCredentials();
+    updateSyncStatus();
   }
 }
 
-// --- MODIFIED: Now also handles showing/hiding the connection UI ---
 async function updateSyncStatus() {
     const statusEl = document.getElementById('sync-status');
     const formEl = document.getElementById('credentials-form');
     const connectedEl = document.getElementById('connected-view');
-    
     const token = localStorage.getItem('ankiAccessToken');
     const id = localStorage.getItem('ankiGistId');
 
@@ -150,11 +128,10 @@ async function updateSyncStatus() {
         return;
     }
 
-    // Credentials exist, so show the 'connected' view and test them
     formEl.style.display = 'none';
     connectedEl.style.display = 'block';
     statusEl.textContent = 'Connecting...';
-    statusEl.style.color = '#555'; // Neutral color for "connecting"
+    statusEl.style.color = '#555';
 
     try {
         const response = await fetch(`${GIST_API_BASE}${id}`, {
@@ -173,7 +150,6 @@ async function updateSyncStatus() {
 async function saveProgress() {
   const token = localStorage.getItem('ankiAccessToken');
   const id = localStorage.getItem('ankiGistId');
-  
   const base_time_ms = Date.now();
   const cardsWithOffsets = {};
   for (const char in cards) {

@@ -64,22 +64,44 @@ function searchForChar() {
     }
   }
 }
-function updateSyncStatus(message, isError = false) {
+// --- MODIFIED: Controls the status light color and tooltip ---
+function updateSyncStatus(status) {
   const statusEl = document.getElementById('sync-status-indicator');
+  statusEl.textContent = ''; // Ensure no text is displayed
+
   if (!accessToken || !gistId) {
-    statusEl.textContent = 'Local';
-    statusEl.style.color = '#f39c12';
+    statusEl.style.backgroundColor = '#f39c12'; // Yellow for local
+    statusEl.title = 'Local Mode (Not Synced)';
     return;
   }
-  statusEl.textContent = 'Sync';
-  statusEl.style.color = isError ? '#e74c3c' : '#2ecc71';
+
+  switch (status) {
+    case 'syncing':
+      statusEl.style.backgroundColor = '#f39c12'; // Yellow
+      statusEl.title = 'Syncing...';
+      break;
+    case 'success':
+      statusEl.style.backgroundColor = '#2ecc71'; // Green
+      statusEl.title = 'Synced';
+      break;
+    case 'error':
+      statusEl.style.backgroundColor = '#e74c3c'; // Red
+      statusEl.title = 'Sync Failed';
+      break;
+    case 'conflict':
+      statusEl.style.backgroundColor = '#e74c3c'; // Red
+      statusEl.title = 'Sync Conflict';
+      break;
+    default:
+      statusEl.style.backgroundColor = '#2ecc71'; // Green
+      statusEl.title = 'Connected';
+  }
 }
 
 // --- MODIFIED: Heavily updated with ETag conflict detection ---
 async function saveToCloud() {
   if (!accessToken || !gistId) return;
 
-  // MODIFIED: Prepare data with base time and offset for saving
   const base_time_ms = Date.now();
   const cardsWithOffsets = {};
   for (const char in cards) {
@@ -100,7 +122,7 @@ async function saveToCloud() {
 
     if (lastKnownETag && currentRemoteETag !== lastKnownETag) {
       alert("Sync Conflict!\n\nYour data on the cloud was updated by another device. To prevent data loss, this save has been cancelled.\n\nPlease reload the page to get the latest data.");
-      updateSyncStatus('Conflict', true);
+      updateSyncStatus('conflict');
       return; 
     }
 
@@ -113,11 +135,11 @@ async function saveToCloud() {
     if (!patchResponse.ok) throw new Error(`HTTP error! Status: ${patchResponse.status}`);
     
     lastKnownETag = patchResponse.headers.get('ETag');
-    updateSyncStatus('Synced', false);
+    updateSyncStatus('success');
 
   } catch (error) {
     console.error('Failed to save to Gist:', error);
-    updateSyncStatus('Sync Failed', true);
+    updateSyncStatus('error');
   }
 }
 
@@ -137,33 +159,30 @@ async function loadFromCloud() {
     if (data.files && data.files[GIST_FILENAME]) {
       const content = data.files[GIST_FILENAME].content;
       
-      // MODIFIED: Process loaded data to handle both old (absolute) and new (offset) formats
       if (content) {
         const parsedData = JSON.parse(content);
         if (parsedData && parsedData.base_time_ms && parsedData.cards) {
-          // New format with base time and offsets
           const baseTime = parsedData.base_time_ms;
           const loadedCards = parsedData.cards;
           const processedCards = {};
           for (const char in loadedCards) {
             const cardData = loadedCards[char];
-            const dueTimestamp = baseTime + (cardData[DUE] * 60000); // offset is in minutes
+            const dueTimestamp = baseTime + (cardData[DUE] * 60000);
             processedCards[char] = [cardData[INTERVAL], cardData[EASE], dueTimestamp];
           }
           cards = processedCards;
         } else {
-          // Old format, or empty object
           cards = parsedData || {};
         }
       } else {
         cards = {};
       }
     }
-    updateSyncStatus('Connected', false);
+    updateSyncStatus('success');
     return true;
   } catch (error) {
     console.error('Failed to load from Gist:', error);
-    updateSyncStatus('Connection Failed', true);
+    updateSyncStatus('error');
     lastKnownETag = null; 
     return false;
   }
@@ -212,8 +231,8 @@ function renderDefinitions(data) {
       content += `<li>`;
       if (def.type) content += `<span class="part-of-speech">[${def.type}]</span> `;
       content += def.def;
-      if (def.example) def.example.forEach(ex => { content += `<span class="example">例：${ex}</span>`; });
-      if (def.quote) def.quote.forEach(q => { content += `<span class="example">引：${q}</span>`; });
+      if (def.example) def.example.forEach(ex => { content += `<span class="example">Example: ${ex}</span>`; });
+      if (def.quote) def.quote.forEach(q => { content += `<span class="example">Quote: ${q}</span>`; });
       content += `</li>`;
     });
     content += `</ol>`;
@@ -274,19 +293,17 @@ function formatInterval(minutes) {
   return hours < 24 ? `${Math.round(hours)}h` : `${Math.round(hours / 24)}d`;
 }
 
-// MODIFIED: Handles new data format for local storage fallback
 function saveProgress() {
-  // Clear any existing timer to reset the debounce period
   if (saveTimeout) {
     clearTimeout(saveTimeout);
   }
-
-  // Set a new timer to execute the save operation after the delay
+  if (accessToken && gistId) {
+    updateSyncStatus('syncing');
+  }
   saveTimeout = setTimeout(async () => {
     if (accessToken && gistId) { 
       await saveToCloud(); 
     } else {
-      // Also debounce local saving
       const base_time_ms = Date.now();
       const cardsWithOffsets = {};
       for (const char in cards) {
@@ -299,7 +316,6 @@ function saveProgress() {
   }, SAVE_DEBOUNCE_DELAY);
 }
 
-// MODIFIED: Handles new data format for local storage
 async function loadProgress() {
   const cloudSuccess = await loadFromCloud();
   if (!cloudSuccess) {
@@ -308,7 +324,6 @@ async function loadProgress() {
     if (saved) {
         const parsedData = JSON.parse(saved);
         if (parsedData && parsedData.base_time_ms && parsedData.cards) {
-            // New format
             const baseTime = parsedData.base_time_ms;
             const loadedCards = parsedData.cards;
             const processedCards = {};
@@ -319,26 +334,24 @@ async function loadProgress() {
             }
             cards = processedCards;
         } else {
-            // Old format
             cards = parsedData || {};
         }
     }
   }
-  updateSyncStatus();
+  if (!cloudSuccess) { updateSyncStatus(); }
 }
 function calculateNextState(cardData, action) {
     let newInterval, newEase = cardData[EASE];
     const good = cardData[INTERVAL] < CONSTANTS.MIN_GOOD_INTERVAL ? CONSTANTS.MIN_GOOD_INTERVAL : cardData[INTERVAL] * (cardData[EASE] / 100);
     switch(action) {
         case "again": newInterval = CONSTANTS.AGAIN_INTERVAL; newEase = Math.max(CONSTANTS.MIN_EASE, newEase - CONSTANTS.EASE_PENALTY_AGAIN); break;
-        case "hard": newInterval = (CONSTANTS.AGAIN_INTERVAL + good) / 2 * CONSTANTS.HARD_MULTIPLIER; newEase = Math.max(CONSTANTS.MIN_EASE, newEase - CONSTANTS.EASE_PENALTY_HARD); break;
         case "good": newInterval = good; break;
         case "easy": newInterval = (cardData[INTERVAL] < CONSTANTS.MIN_DAY_INTERVAL ? CONSTANTS.MIN_DAY_INTERVAL * CONSTANTS.EASY_INITIAL_DAYS : good * CONSTANTS.EASY_MULTIPLIER); newEase += CONSTANTS.EASE_BONUS_EASY; break;
     }
     return { interval: Math.round(newInterval), ease: newEase };
 }
 function updateButtonLabels() {
-    ['again', 'hard', 'good', 'easy'].forEach(action => {
+    ['again', 'good', 'easy'].forEach(action => {
         const small = document.getElementById(`btn-${action}`).querySelector('small');
         small.textContent = currentCard ? formatInterval(calculateNextState(currentCard.data, action).interval) : '---';
     });

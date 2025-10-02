@@ -28,21 +28,45 @@
       font-size: 18px; color: #333;
       white-space: nowrap;
     }
-    #sync-status-indicator { font-size: 14px; font-weight: bold; }
+    /* NEW: Styles for the status light */
+    #sync-status-indicator {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background-color: #ccc; /* Default grey color */
+      border: 1px solid rgba(0,0,0,0.1);
+      transition: background-color 0.3s ease;
+    }
 
-    #search-btn, #edit-btn {
+    #search-btn {
       position: absolute;
       top: 15px;
+      left: 20px;
       font-size: 26px;
       color: #555;
       text-decoration: none;
       transition: color 0.2s;
       cursor: pointer;
     }
-    #search-btn { left: 20px; }
-    #edit-btn { right: 20px; }
-    #search-btn:hover, #edit-btn:hover {
-      color: #1e90ff;
+    #search-btn:hover { color: #1e90ff; }
+    
+    .top-right-controls {
+        position: absolute;
+        top: 15px;
+        right: 20px;
+        display: flex;
+        gap: 15px;
+    }
+    .top-right-controls a {
+        font-size: 26px;
+        color: #555;
+        text-decoration: none;
+        transition: color 0.2s;
+        cursor: pointer;
+    }
+    .top-right-controls a:hover {
+        color: #1e90ff;
     }
 
     .main-content {
@@ -98,16 +122,21 @@
     #speak-btn:hover, #stroke-btn:hover { color: #1e90ff; }
     
     .buttons {
-      display: flex; gap: 10px; flex-wrap: wrap;
+      display: flex; gap: 15px;
+      flex-wrap: wrap;
       justify-content: center;
     }
     button {
-      font-size: 18px; padding: 10px 15px; border: none; border-radius: 6px;
-      color: white; background-color: #1e90ff; cursor: pointer; min-width: 100px;
+      font-size: 18px; 
+      padding: 10px 20px;
+      border: none; border-radius: 6px;
+      color: white; background-color: #1e90ff; cursor: pointer; 
+      min-width: 130px;
     }
     button:hover { opacity: 0.85; }
-    .again { background-color: #e74c3c; } .hard { background-color: #f39c12; }
-    .good { background-color: #2ecc71; } .easy { background-color: #3498db; }
+    .again { background-color: #e74c3c; }
+    .good { background-color: #2ecc71; } 
+    .easy { background-color: #3498db; }
     
     #definitions-container {
       max-width: 600px;
@@ -185,7 +214,10 @@
       body {
         padding: 60px 5px 140px 5px;
       }
-      #search-btn, #edit-btn {
+      #search-btn {
+        font-size: 24px;
+      }
+      .top-right-controls a {
         font-size: 24px;
       }
       #main-display-wrapper {
@@ -199,12 +231,12 @@
         font-size: 28px;
       }
       .buttons { 
-        gap: 5px; 
+        gap: 10px; 
       }
       button { 
         font-size: 16px; 
         padding: 8px 10px; 
-        min-width: 80px; 
+        min-width: 100px;
       }
       #stroke-order-animation {
         width: 280px;
@@ -216,10 +248,14 @@
 <body>
   <div id="status-container">
     <span id="status">Loading...</span>
-    <span id="sync-status-indicator"></span>
+    <span id="sync-status-indicator" title="Sync status"></span>
   </div>
   <a id="search-btn" aria-label="Search Character"><i class="ti ti-search"></i></a>
-  <a href="edit.html" id="edit-btn" aria-label="Edit Deck & Settings"><i class="ti ti-settings"></i></a>
+  <div class="top-right-controls">
+    <!-- MODIFIED: Icon changed to ti-chart-pie -->
+    <a href="stats.html" id="stats-btn" aria-label="View Statistics"><i class="ti ti-chart-pie"></i></a>
+    <a href="edit.html" id="edit-btn" aria-label="Edit Deck & Settings"><i class="ti ti-settings"></i></a>
+  </div>
   
   <div class="main-content">
     <div id="main-display-wrapper">
@@ -243,7 +279,6 @@
     </div>
     <div class="buttons">
       <button id="btn-again" class="again" onclick="rate('again')">Again<br><small>...</small></button>
-      <button id="btn-hard" class="hard" onclick="rate('hard')">Hard<br><small>...</small></button>
       <button id="btn-good" class="good" onclick="rate('good')">Good<br><small>...</small></button>
       <button id="btn-easy" class="easy" onclick="rate('easy')">Easy<br><small>...</small></button>
     </div>
