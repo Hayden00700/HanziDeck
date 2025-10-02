@@ -28,7 +28,6 @@
       font-size: 18px; color: #333;
       white-space: nowrap;
     }
-    /* NEW: Styles for the status light */
     #sync-status-indicator {
       display: inline-block;
       width: 12px;
@@ -196,18 +195,28 @@
       border: 1px solid #ccc;
       border-radius: 8px;
     }
-    #practice-controls {
+    
+    /* MODIFIED: Controls are now split into two groups */
+    .practice-controls-group {
       display: flex;
       align-items: center;
       gap: 10px;
     }
-    #practice-controls button {
+    #practice-controls-quiz {
+        display: none; /* Hidden by default */
+    }
+
+    .practice-controls-group button {
       min-width: 90px;
       font-size: 16px;
       padding: 8px 12px;
     }
-    #practice-controls .close-btn {
+    .practice-controls-group .close-btn,
+    .practice-controls-group .end-quiz-btn {
       background-color: #e74c3c;
+    }
+    .practice-controls-group .hint-btn {
+        background-color: #f39c12;
     }
 
     @media (max-width: 768px) {
@@ -252,7 +261,6 @@
   </div>
   <a id="search-btn" aria-label="Search Character"><i class="ti ti-search"></i></a>
   <div class="top-right-controls">
-    <!-- MODIFIED: Icon changed to ti-chart-pie -->
     <a href="stats.html" id="stats-btn" aria-label="View Statistics"><i class="ti ti-chart-pie"></i></a>
     <a href="edit.html" id="edit-btn" aria-label="Edit Deck & Settings"><i class="ti ti-settings"></i></a>
   </div>
@@ -263,11 +271,19 @@
     </div>
     <div id="practice-container">
       <div id="stroke-order-animation"></div>
-      <div id="practice-controls">
+      
+      <!-- MODIFIED: Controls are now in two groups for better UX -->
+      <div id="practice-controls-main" class="practice-controls-group">
         <button onclick="animateAllStrokes()">Animate</button>
-        <button onclick="startQuiz()">Practice</button>
+        <button onclick="startPracticeQuiz()">Practice</button>
         <button class="close-btn" onclick="showStrokeOrder()">Close</button>
       </div>
+
+      <div id="practice-controls-quiz" class="practice-controls-group">
+        <button class="hint-btn" onclick="giveHint()">Hint</button>
+        <button class="end-quiz-btn" onclick="endPracticeQuiz()">End Quiz</button>
+      </div>
+
     </div>
     <div id="definitions-container"></div>
   </div>
@@ -284,7 +300,6 @@
     </div>
   </div>
 
-  <!-- All JavaScript logic is now in an external file -->
   <script src="index.js" defer></script>
 </body>
 </html>

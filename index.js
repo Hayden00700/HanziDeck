@@ -9,6 +9,7 @@ let chineseVoicePromise = null;
 
 // ETag is no longer used for conflict checks.
 let lastKnownETag = null;
+let hintTimer = null; // NEW: Timer to manage the manual hint display
 
 const INTERVAL = 0, EASE = 1, DUE = 2;
 const MOEDICT_API_BASE = 'https://www.moedict.tw/raw/';
@@ -234,31 +235,96 @@ async function fetchAndDisplayDetails(char) {
     renderDefinitions(data);
   } catch (error) { console.error("Moedict API failed:", error); container.innerHTML = `<h4>API call failed</h4>`; }
 }
+
 function showStrokeOrder() {
   const mainDisplayWrapper = document.getElementById('main-display-wrapper');
   const practiceContainer = document.getElementById('practice-container');
   const definitionsEl = document.getElementById('definitions-container');
+  
   if (isPracticeVisible) {
     practiceContainer.style.display = 'none';
     mainDisplayWrapper.style.display = 'flex';
     footerControls.style.display = 'flex';
     isPracticeVisible = false;
+    if (practiceHanziWriter) practiceHanziWriter.cancelQuiz();
   } else {
     if (!currentCard || !currentCard.char) return;
     mainDisplayWrapper.style.display = 'none';
     footerControls.style.display = 'none';
     definitionsEl.style.display = 'none';
+    
     const size = window.innerWidth < 768 ? 280 : 300;
     if (!practiceHanziWriter) {
       practiceHanziWriter = HanziWriter.create('stroke-order-animation', currentCard.char, { width: size, height: size, padding: 5, showOutline: true, strokeAnimationSpeed: 0.5, delayBetweenStrokes: 100, strokeColor: '#000000', drawingWidth: 40 });
-    } else { practiceHanziWriter.setCharacter(currentCard.char); }
-    practiceHanziWriter.animateCharacter();
+    } else { 
+        practiceHanziWriter.setCharacter(currentCard.char); 
+    }
+    
+    resetPracticeView();
     practiceContainer.style.display = 'flex';
     isPracticeVisible = true;
   }
 }
+
+function resetPracticeView() {
+    practiceHanziWriter.showCharacter();
+    practiceHanziWriter.showOutline();
+    
+    document.getElementById('practice-controls-main').style.display = 'flex';
+    document.getElementById('practice-controls-quiz').style.display = 'none';
+    animateAllStrokes();
+}
+
+// MODIFIED: Quiz logic is now more robust to prevent conflicts.
+function startPracticeQuiz() {
+    document.getElementById('practice-controls-main').style.display = 'none';
+    document.getElementById('practice-controls-quiz').style.display = 'flex';
+
+    practiceHanziWriter.quiz({
+        showHintAfterMisses: 1,
+        
+        // When user gets a stroke right, make sure our manual hint is hidden.
+        onCorrectStroke: (strokeData) => {
+            if (hintTimer) clearTimeout(hintTimer);
+            practiceHanziWriter.hideOutline();
+        },
+        // When user makes a mistake, also hide our manual hint to allow the
+        // single-stroke automatic hint to be clearly visible.
+        onMistake: (strokeData) => {
+            if (hintTimer) clearTimeout(hintTimer);
+            practiceHanziWriter.hideOutline();
+        },
+        onComplete: (summaryData) => {
+            setTimeout(resetPracticeView, 1000);
+        }
+    });
+}
+
+// MODIFIED: Hint logic is now safer.
+function giveHint() {
+    if (!practiceHanziWriter) return;
+    
+    if (hintTimer) clearTimeout(hintTimer);
+
+    practiceHanziWriter.showOutline();
+    
+    hintTimer = setTimeout(() => {
+        practiceHanziWriter.hideOutline();
+        hintTimer = null;
+    }, 2000);
+}
+
+function endPracticeQuiz() {
+    if (hintTimer) {
+        clearTimeout(hintTimer);
+        hintTimer = null;
+    }
+    if (practiceHanziWriter) practiceHanziWriter.cancelQuiz();
+    resetPracticeView();
+}
+
 function animateAllStrokes() { if (practiceHanziWriter) practiceHanziWriter.animateCharacter(); }
-function startQuiz() { if (practiceHanziWriter) practiceHanziWriter.quiz(); }
+
 function displayCharacter(character) {
     const charEl = document.getElementById('char');
     charEl.innerHTML = ''; 
@@ -275,15 +341,11 @@ function formatInterval(minutes) {
   return hours < 24 ? `${Math.round(hours)}h` : `${Math.round(hours / 24)}d`;
 }
 
-// --- MODIFIED: Debounce mechanism REMOVED for immediate saving ---
 async function saveProgress() {
   if (accessToken && gistId) {
     updateSyncStatus('syncing');
-    // We use await here to ensure saveToCloud is called, but we don't
-    // need to block other functions on its completion.
     await saveToCloud();
   } else {
-    // Local save is synchronous and happens instantly.
     const base_time_ms = Date.now();
     const cardsWithOffsets = {};
     for (const char in cards) {
@@ -357,7 +419,6 @@ async function initializeDeck() {
         newCards[char] = [ oldCard.interval || 0, oldCard.ease || 250, oldCard.due || Date.now() ];
       }
       cards = newCards;
-      // This save should also be immediate
       saveProgress(); 
       console.log("Migration to array format complete.");
     }
@@ -435,8 +496,6 @@ function rate(action) {
   currentCard.data[DUE] = Date.now() + minutesToMs(interval);
   cards[currentCard.char] = currentCard.data;
   
-  // The 'await' keyword is not used here, allowing the UI to update instantly
-  // while the save operation runs in the background.
   saveProgress(); 
   
   showNextCard();
