@@ -33,7 +33,7 @@
       width: 12px;
       height: 12px;
       border-radius: 50%;
-      background-color: #ccc; /* Default grey color */
+      background-color: #ccc;
       border: 1px solid rgba(0,0,0,0.1);
       transition: background-color 0.3s ease;
     }
@@ -152,105 +152,39 @@
       overflow-y: auto;
       display: none;
     }
-    #definitions-container h4 {
-      margin: 10px 0 5px 0;
-      font-size: 24px;
-      font-weight: normal;
-      color: #1e90ff;
-      border-bottom: 1px solid #dee2e6;
-      padding-bottom: 5px;
-    }
-    #definitions-container ol {
-      padding-left: 25px;
-      margin: 0;
-    }
-    #definitions-container li {
-      margin-bottom: 12px;
-    }
-    #definitions-container .part-of-speech {
-      font-weight: bold;
-      color: #343a40;
-    }
-    #definitions-container .example {
-      color: #6c757d;
-      font-style: italic;
-      margin-top: 5px;
-      display: block;
-    }
+    #definitions-container h4 { margin: 10px 0 5px 0; font-size: 24px; font-weight: normal; color: #1e90ff; border-bottom: 1px solid #dee2e6; padding-bottom: 5px; }
+    #definitions-container ol { padding-left: 25px; margin: 0; }
+    #definitions-container li { margin-bottom: 12px; }
+    #definitions-container .part-of-speech { font-weight: bold; color: #343a40; }
+    #definitions-container .example { color: #6c757d; font-style: italic; margin-top: 5px; display: block; }
 
-    #practice-container {
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      gap: 20px;
-      min-height: 350px;
-      width: 100%;
-      box-sizing: border-box;
-      justify-content: center;
-      padding-top: 20px;
-    }
-    #stroke-order-animation {
-      width: 300px;
-      height: 300px;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-    }
+    #practice-container { display: none; flex-direction: column; align-items: center; gap: 20px; min-height: 350px; width: 100%; box-sizing: border-box; justify-content: center; padding-top: 20px; }
+    #stroke-order-animation { width: 300px; height: 300px; border: 1px solid #ccc; border-radius: 8px; }
+    .practice-controls-group { display: flex; align-items: center; gap: 10px; }
+    #practice-controls-quiz { display: none; }
+    .practice-controls-group button { min-width: 90px; font-size: 16px; padding: 8px 12px; }
+    .practice-controls-group .close-btn, .practice-controls-group .end-quiz-btn { background-color: #e74c3c; }
     
-    /* MODIFIED: Controls are now split into two groups */
-    .practice-controls-group {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    #practice-controls-quiz {
-        display: none; /* Hidden by default */
-    }
-
-    .practice-controls-group button {
-      min-width: 90px;
-      font-size: 16px;
-      padding: 8px 12px;
-    }
-    .practice-controls-group .close-btn,
-    .practice-controls-group .end-quiz-btn {
-      background-color: #e74c3c;
-    }
-    .practice-controls-group .hint-btn {
-        background-color: #f39c12;
-    }
+    .hint-control { display: flex; align-items: center; gap: 10px; color: #333; font-size: 16px; }
+    .switch { position: relative; display: inline-block; width: 50px; height: 28px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .3s; }
+    .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: .3s; }
+    input:checked + .slider { background-color: #2ecc71; }
+    input:checked + .slider:before { transform: translateX(22px); }
+    .slider.round { border-radius: 28px; }
+    .slider.round:before { border-radius: 50%; }
 
     @media (max-width: 768px) {
-      body {
-        padding: 60px 5px 140px 5px;
-      }
-      #search-btn {
-        font-size: 24px;
-      }
-      .top-right-controls a {
-        font-size: 24px;
-      }
-      #main-display-wrapper {
-        min-height: 280px;
-      }
-      #char {
-        width: 280px;
-        height: 280px;
-      }
-      #speak-btn, #stroke-btn { 
-        font-size: 28px;
-      }
-      .buttons { 
-        gap: 10px; 
-      }
-      button { 
-        font-size: 16px; 
-        padding: 8px 10px; 
-        min-width: 100px;
-      }
-      #stroke-order-animation {
-        width: 280px;
-        height: 280px;
-      }
+      body { padding: 60px 5px 140px 5px; }
+      #search-btn { font-size: 24px; }
+      .top-right-controls a { font-size: 24px; }
+      #main-display-wrapper { min-height: 280px; }
+      #char { width: 280px; height: 280px; }
+      #speak-btn, #stroke-btn { font-size: 28px; }
+      .buttons { gap: 10px; }
+      button { font-size: 16px; padding: 8px 10px; min-width: 100px; }
+      #stroke-order-animation { width: 280px; height: 280px; }
     }
   </style>
 </head>
@@ -272,15 +206,21 @@
     <div id="practice-container">
       <div id="stroke-order-animation"></div>
       
-      <!-- MODIFIED: Controls are now in two groups for better UX -->
       <div id="practice-controls-main" class="practice-controls-group">
         <button onclick="animateAllStrokes()">Animate</button>
-        <button onclick="startPracticeQuiz()">Practice</button>
+        <!-- MODIFIED: Button text changed to "Quiz" -->
+        <button onclick="startPracticeQuiz()">Quiz</button>
         <button class="close-btn" onclick="showStrokeOrder()">Close</button>
       </div>
 
       <div id="practice-controls-quiz" class="practice-controls-group">
-        <button class="hint-btn" onclick="giveHint()">Hint</button>
+        <div class="hint-control">
+          <span>Hint</span>
+          <label class="switch">
+            <input type="checkbox" id="hint-toggle-checkbox">
+            <span class="slider round"></span>
+          </label>
+        </div>
         <button class="end-quiz-btn" onclick="endPracticeQuiz()">End Quiz</button>
       </div>
 

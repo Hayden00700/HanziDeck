@@ -5,11 +5,9 @@ let isPracticeVisible = false;
 const synth = window.speechSynthesis;
 let practiceHanziWriter = null;
 let chineseVoicePromise = null;
-// The timeout mechanism is now removed.
 
 // ETag is no longer used for conflict checks.
 let lastKnownETag = null;
-let hintTimer = null; // NEW: Timer to manage the manual hint display
 
 const INTERVAL = 0, EASE = 1, DUE = 2;
 const MOEDICT_API_BASE = 'https://www.moedict.tw/raw/';
@@ -275,50 +273,28 @@ function resetPracticeView() {
     animateAllStrokes();
 }
 
-// MODIFIED: Quiz logic is now more robust to prevent conflicts.
+// MODIFIED: Explicitly hide outline on quiz start to match the toggle state
 function startPracticeQuiz() {
     document.getElementById('practice-controls-main').style.display = 'none';
     document.getElementById('practice-controls-quiz').style.display = 'flex';
+    
+    const hintToggle = document.getElementById('hint-toggle-checkbox');
+    hintToggle.checked = false;
+
+    // Ensure the visual state matches the control state at the start of the quiz
+    if (practiceHanziWriter) {
+        practiceHanziWriter.hideOutline();
+    }
 
     practiceHanziWriter.quiz({
         showHintAfterMisses: 1,
-        
-        // When user gets a stroke right, make sure our manual hint is hidden.
-        onCorrectStroke: (strokeData) => {
-            if (hintTimer) clearTimeout(hintTimer);
-            practiceHanziWriter.hideOutline();
-        },
-        // When user makes a mistake, also hide our manual hint to allow the
-        // single-stroke automatic hint to be clearly visible.
-        onMistake: (strokeData) => {
-            if (hintTimer) clearTimeout(hintTimer);
-            practiceHanziWriter.hideOutline();
-        },
         onComplete: (summaryData) => {
             setTimeout(resetPracticeView, 1000);
         }
     });
 }
 
-// MODIFIED: Hint logic is now safer.
-function giveHint() {
-    if (!practiceHanziWriter) return;
-    
-    if (hintTimer) clearTimeout(hintTimer);
-
-    practiceHanziWriter.showOutline();
-    
-    hintTimer = setTimeout(() => {
-        practiceHanziWriter.hideOutline();
-        hintTimer = null;
-    }, 2000);
-}
-
 function endPracticeQuiz() {
-    if (hintTimer) {
-        clearTimeout(hintTimer);
-        hintTimer = null;
-    }
     if (practiceHanziWriter) practiceHanziWriter.cancelQuiz();
     resetPracticeView();
 }
@@ -506,3 +482,13 @@ loadCredentials();
 document.getElementById('search-btn').addEventListener('click', searchForChar);
 getChineseVoice();
 initializeDeck();
+
+document.getElementById('hint-toggle-checkbox').addEventListener('change', (event) => {
+  if (practiceHanziWriter) {
+    if (event.target.checked) {
+      practiceHanziWriter.showOutline();
+    } else {
+      practiceHanziWriter.hideOutline();
+    }
+  }
+});
