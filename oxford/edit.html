@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Edit Words & Settings</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f0f2f5;
+      color: #333;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 25px;
+    }
+    h1 {
+      font-weight: 600;
+      color: #333;
+      margin: 0;
+      font-size: 28px;
+    }
+    .back-link {
+      font-size: 32px;
+      color: #555;
+      text-decoration: none;
+      transition: color 0.2s;
+      line-height: 1;
+    }
+    .back-link:hover {
+        color: #e74c3c;
+    }
+    .settings-card {
+      background-color: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      padding: 25px;
+      margin-bottom: 25px;
+    }
+    .settings-card h2 {
+      margin-top: 0;
+      margin-bottom: 20px;
+      text-align: center;
+      font-weight: 500;
+      color: #555;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    .form-group input,
+    .form-group textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      box-sizing: border-box;
+      font-size: 16px;
+    }
+    .form-group textarea {
+        min-height: 100px;
+        resize: vertical;
+    }
+    .status-message {
+      text-align: center;
+      margin-top: 15px;
+      font-size: 14px;
+      font-weight: 500;
+      height: 20px;
+    }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 12px 15px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 600;
+      color: #fff;
+      transition: background-color 0.2s, opacity 0.2s;
+    }
+    .btn:hover { opacity: 0.85; }
+    .btn-green { background-color: #2ecc71; }
+    .btn-blue { background-color: #3498db; }
+    .btn-red { 
+        background-color: #e74c3c;
+    }
+    .btn-small {
+        padding: 5px 8px; 
+        font-size: 13px; 
+        width: auto;
+        display: inline-block;
+    }
+    .table-container {
+        overflow-x: auto;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        background-color: #fff;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        overflow: hidden;
+        /* 修正: 移除 table-layout: fixed; 和 min-width，讓表格寬度由內容決定 */
+    }
+    th, td {
+        padding: 8px 5px;
+        text-align: left;
+        border-bottom: 1px solid #f0f0f0;
+        /* 修正: 移除 white-space: nowrap;，讓內容有彈性 */
+    }
+    /* 修正: 調整表格欄位寬度以優化 Action 欄位顯示 */
+    thead th:nth-child(1) { width: auto; } /* Word: 移除固定寬度 */
+    thead th:nth-child(2) { width: 10%; min-width: 50px; } /* Level: 最小寬度 */
+    thead th:nth-child(3) { width: 15%; min-width: 60px; } /* Interval: 最小寬度 */
+    thead th:nth-child(4) { width: 15%; min-width: 85px; text-align: center; } /* Action: 最小寬度 */
+
+    thead th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+        color: #555;
+        white-space: nowrap; /* 確保標頭不換行 */
+    }
+    tbody tr:last-child td {
+        border-bottom: none;
+    }
+    tbody tr:hover {
+        background-color: #f5f5f5;
+    }
+    .word-cell {
+        font-family: Roboto, "Segoe UI", sans-serif;
+        font-size: 15px; 
+        font-weight: 500;
+        white-space: normal; /* 允許單字換行 */
+        word-break: break-word; 
+    }
+    /* 修正: 讓 Level/Interval/Action 的內容不換行，以佔據最小空間 */
+    tbody td:not(.word-cell) {
+        white-space: nowrap;
+    }
+
+    th.sortable {
+        cursor: pointer;
+        user-select: none;
+    }
+    th.sortable:hover {
+        background-color: #efefef;
+    }
+    .action-cell {
+        text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="header">
+        <h1>Edit Words & Settings</h1>
+        <a href="index.html" class="back-link" aria-label="Back to Main"><i class="ti ti-x"></i></a>
+    </div>
+
+    <div class="settings-card">
+      <h2>GitHub Gist Sync</h2>
+      
+      <div id="credentials-form">
+        <div class="form-group">
+          <input type="password" id="accessToken" placeholder="GitHub Personal Access Token">
+        </div>
+        <div class="form-group">
+          <input type="text" id="gistId" placeholder="Gist ID">
+        </div>
+        <button class="btn btn-green" onclick="saveCredentials()">Save & Connect</button>
+      </div>
+
+      <div id="connected-view" style="display: none;">
+        <button class="btn btn-red" onclick="disconnect()">Disconnect from Gist</button>
+      </div>
+
+      <p id="sync-status" class="status-message"></p>
+    </div>
+    
+    <div class="settings-card">
+      <h2>Bulk Operations</h2>
+      <div class="form-group">
+        <textarea id="bulk-add-text" placeholder="Enter words to add or reset here, one word per line."></textarea>
+      </div>
+      <button class="btn btn-blue" onclick="handleBulkAddOrReset()">Bulk Add / Reset Words</button>
+    </div>
+
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th id="sort-word" class="sortable" onclick="sortTable('word')">Word ▲</th>
+            <th id="sort-level" class="sortable" onclick="sortTable('level')">Level</th>
+            <th id="sort-interval" class="sortable" onclick="sortTable('interval')">Interval</th>
+            <th class="action-cell">Action</th>
+          </tr>
+        </thead>
+        <tbody id="card-list-body">
+          <!-- Table rows will be rendered here by JavaScript -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="edit.js" defer></script>
+</body>
+</html>
