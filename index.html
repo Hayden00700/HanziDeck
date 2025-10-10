@@ -3,250 +3,240 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>English Vocabulary Deck</title>
+  <title>Hanzi Deck</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3/dist/hanzi-writer.min.js"></script>
   <style>
+    :root {
+      --char-size-desktop: 280px;
+      --char-size-mobile: 220px;
+    }
     html, body { height: 100%; width: 100%; overflow-x: hidden; }
     body {
       display: flex; flex-direction: column;
-      align-items: center; justify-content: flex-start;
-      margin: 0; padding: 0;
-      box-sizing: border-box; background-color: #f0f2f5;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    }
-    #top-bar {
-      position: fixed; top: 0; left: 0; width: 100%; 
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 10px 15px; box-sizing: border-box;
-      z-index: 100;
-      background-color: #f0f2f5; 
+      align-items: center; margin: 0;
+      padding: 50px 10px 150px 10px;
+      box-sizing: border-box; background-color: #fefefe;
+      font-family: "Noto Serif TC", "Microsoft JhengHei", sans-serif;
     }
     #status-container {
-      display: flex; align-items: center; gap: 5px; 
-      font-size: 16px; color: #333; white-space: nowrap;
-      background-color: #fff; padding: 5px 15px; border-radius: 15px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 0 auto;
+      position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
+      display: flex; align-items: center; gap: 10px;
+      font-size: 18px; color: #333;
+      white-space: nowrap;
     }
     #sync-status-indicator {
-      display: inline-block; width: 12px; height: 12px;
-      border-radius: 50%; background-color: #ccc;
-      transition: background-color 0.3s ease; margin-left: 5px;
-    }
-    .top-controls-group {
-        display: flex; align-items: center; gap: 15px; 
-        font-size: 24px; color: #555;
-    }
-    .top-controls-group a, .top-controls-group i {
-        color: #555; cursor: pointer; transition: color 0.2s;
-        line-height: 1; text-decoration: none !important; 
-        border-bottom: none !important; 
-    }
-    .top-controls-group a:hover, .top-controls-group i:hover { color: #1e90ff; }
-    .ti {
-        text-decoration: none !important; vertical-align: middle; 
-        border-bottom: none !important; text-shadow: none !important; 
-    }
-    #search-icon-btn {
-        font-size: 24px; color: #555; cursor: pointer;
-        transition: color 0.2s; z-index: 101;
-    }
-    #search-icon-btn:hover { color: #1e90ff; }
-
-    .main-content {
-      display: flex; flex-direction: column; align-items: center; 
-      width: 100%; opacity: 0; transition: opacity 0.3s ease-in-out;
-      padding: 70px 20px 120px 20px; box-sizing: border-box;
-      min-height: 100vh;
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background-color: #ccc;
+      border: 1px solid rgba(0,0,0,0.1);
+      transition: background-color 0.3s ease;
     }
 
-    #flashcard {
-      width: 100%; max-width: 500px;
-      min-height: 300px; height: auto;
-      max-height: calc(100vh - 210px); /* Set max height to prevent overflow */
-      background-color: #fff; border-radius: 12px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.1);
-      cursor: pointer; 
-      padding: 20px; 
-      box-sizing: border-box;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-    }
-
-    /* --- UPDATED LAYOUT FOR ICON ALIGNMENT --- */
-    .card-header {
-      display: grid;
-      grid-template-columns: 1fr auto 1fr;
-      align-items: center;
-      width: 100%;
-      min-height: 48px;
-      position: relative;
-    }
-
-    /* Left icon container (delete) flush left */
-    #card-actions-left {
-      grid-column: 1 / 2;
-      justify-self: start;
-      display: flex;
-      align-items: center;
-      padding-left: 10px; /* adjust if needed */
-    }
-
-    /* Right icons (speaker + dictionary) flush right */
-    #card-actions-right {
-      grid-column: 3 / 4;
-      justify-self: end;
-      display: flex;
-      align-items: center;
-      gap: 0px; /* spacing between icons */
-      padding-right: 5px; /* adjust if needed */
-    }
-
-    /* Word centered */
-    #card-front {
-      grid-column: 2 / 3;
-      text-align: center;
-    }
-
-    /* Icon styles */
-    .card-icon-btn {
-      font-size: 22px; color: #b0b0b0;
-      cursor: pointer; transition: color 0.2s, transform 0.2s ease;
-      padding: 5px 2px; /* MODIFIED: Reduced horizontal padding */
-      background: none; border: none;
-      line-height: 1;
-    }
-    .card-icon-btn:hover { color: #3498db; transform: scale(1.1); }
-    #delete-btn:hover { color: #e74c3c; }
-    #speak-btn { font-size: 26px; color: #888; }
-
-    /* Initially hidden */
-    #delete-btn, #dictionary-link-btn, #speak-btn { 
-        visibility: hidden; 
-    }
-
-    .card-face {
-      font-size: 36px; font-weight: bold;
-      color: #333; line-height: 1.2;
-      text-align: center;
-      padding: 0 15px;
+    .top-left-controls {
+        position: absolute;
+        top: 15px;
+        left: 20px;
+        display: flex;
+        gap: 15px;
     }
     
-    .card-content-body {
-        width: 100%;
-        overflow-y: auto; /* Add scrollbar when content overflows */
+    .top-right-controls {
+        position: absolute;
+        top: 15px;
+        right: 20px;
+        display: flex;
+        gap: 15px;
     }
 
-    #card-back { 
-      font-size: 24px; font-weight: normal; 
-      color: #666; display: none; opacity: 0;
-      margin-top: 15px;
-      border-top: 1px solid #eee;
-      text-align: center; /* Explicitly center the text */
-      padding-top: 15px; /* Add space between the border and the text */
+    .top-left-controls a,
+    .top-right-controls a {
+        font-size: 26px;
+        color: #555;
+        text-decoration: none;
+        transition: color 0.2s;
+        cursor: pointer;
     }
 
-    #flashcard.flipped { justify-content: flex-start; }
+    .top-left-controls a:hover,
+    .top-right-controls a:hover {
+        color: #1e90ff;
+    }
 
+    .main-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      margin-top: 0;
+      opacity: 0; 
+      transition: opacity 0.3s ease-in-out;
+    }
+    
     .footer-controls {
-      position: fixed; bottom: 0; left: 0; width: 100%;
-      background-color: #f0f2f5; padding: 10px 0; z-index: 100;
-      display: flex; flex-direction: column; align-items: center;
-      gap: 10px; box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background-color: #fefefe;
+      padding: 10px 0 20px 0;
+      z-index: 100;
+      border-top: 1px solid #eee;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
+    
+    #main-display-wrapper {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      min-height: 350px;
+    }
+
+    #char {
+      display: flex; 
+      justify-content: center; 
+      align-items: center;
+      width: 350px; 
+      height: 350px;
+    }
+    
+    #char-actions-footer {
+      display: flex;
+      gap: 60px;
+      margin-bottom: 15px;
+    }
+    
+    #speak-btn, #stroke-btn {
+      background: none; border: none; color: #333; font-size: 32px;
+      cursor: pointer; padding: 0; line-height: 1; transition: color 0.2s, opacity 0.2s;
+    }
+    #speak-btn:hover, #stroke-btn:hover { color: #1e90ff; }
+    
     .buttons {
-      display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
-      visibility: hidden; width: 95%; max-width: 500px;
-      padding: 0; box-sizing: border-box;
+      display: flex; gap: 15px;
+      flex-wrap: wrap;
+      justify-content: center;
     }
     button {
-      font-size: 16px; padding: 10px 8px; border: none; border-radius: 8px;
-      color: white; cursor: pointer; min-width: 90px;
-      flex-grow: 1; transition: opacity 0.2s;
+      font-size: 18px; 
+      padding: 10px 20px;
+      border: none; border-radius: 6px;
+      color: white; background-color: #1e90ff; cursor: pointer; 
+      min-width: 130px;
     }
     button:hover { opacity: 0.85; }
     .again { background-color: #e74c3c; }
-    .good { background-color: #2ecc71; }
+    .good { background-color: #2ecc71; } 
     .easy { background-color: #3498db; }
     
-    #dictionary-definition {
-      width: 100%; text-align: left; font-size: 15px;
-      color: #555; line-height: 1.5; margin-top: 20px;
-      border-top: 1px solid #eee; padding-top: 20px;
+    #definitions-container {
+      max-width: 600px;
+      width: 95%;
+      margin-top: 10px;
+      padding: 5px 15px;
+      background-color: #f8f9fa;
+      border: 1px solid #e9ecef;
+      border-radius: 8px;
+      text-align: left;
+      font-size: 16px;
+      line-height: 1.7;
+      max-height: 40vh;
+      overflow-y: auto;
       display: none;
     }
-    .phonetic { font-size: 16px; color: #333; margin-bottom: 10px; }
-    .meaning { margin-bottom: 15px; }
-    .part-of-speech { font-weight: bold; color: #2980b9; text-transform: capitalize; }
-    .definitions-list { padding-left: 20px; margin-top: 5px; margin-bottom: 0; }
-    .definitions-list li { margin-bottom: 5px; }
+    #definitions-container h4 { margin: 10px 0 5px 0; font-size: 24px; font-weight: normal; color: #1e90ff; border-bottom: 1px solid #dee2e6; padding-bottom: 5px; }
+    #definitions-container ol { padding-left: 25px; margin: 0; }
+    #definitions-container li { margin-bottom: 12px; }
+    #definitions-container .part-of-speech { font-weight: bold; color: #343a40; }
+    #definitions-container .example { color: #6c757d; font-style: italic; margin-top: 5px; display: block; }
+
+    #practice-container { display: none; flex-direction: column; align-items: center; gap: 20px; min-height: 350px; width: 100%; box-sizing: border-box; justify-content: center; padding-top: 20px; }
+    #stroke-order-animation { width: 300px; height: 300px; border: 1px solid #ccc; border-radius: 8px; }
+    .practice-controls-group { display: flex; align-items: center; gap: 10px; }
+    #practice-controls-quiz { display: none; }
+    .practice-controls-group button { min-width: 90px; font-size: 16px; padding: 8px 12px; }
+    .practice-controls-group .close-btn, .practice-controls-group .end-quiz-btn { background-color: #e74c3c; }
     
-    /* --- ADDED STYLE FOR EXAMPLE SENTENCES --- */
-    .example-sentence {
-        font-style: italic;
-        color: #7f8c8d;
-        margin-top: 5px;
-        padding-left: 10px;
-        border-left: 2px solid #ecf0f1;
-    }
-    
+    .hint-control { display: flex; align-items: center; gap: 10px; color: #333; font-size: 16px; }
+    .switch { position: relative; display: inline-block; width: 50px; height: 28px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .3s; }
+    .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: .3s; }
+    input:checked + .slider { background-color: #2ecc71; }
+    input:checked + .slider:before { transform: translateX(22px); }
+    .slider.round { border-radius: 28px; }
+    .slider.round:before { border-radius: 50%; }
+
     @media (max-width: 768px) {
-      #card-front { font-size: 28px; }
-      #card-back { font-size: 20px; }
+      body { padding: 60px 5px 140px 5px; }
+      .top-left-controls a,
+      .top-right-controls a { font-size: 24px; }
+      #main-display-wrapper { min-height: 280px; }
+      #char { width: 280px; height: 280px; }
+      #speak-btn, #stroke-btn { font-size: 28px; }
+      .buttons { gap: 10px; }
+      button { font-size: 16px; padding: 8px 10px; min-width: 100px; }
+      #stroke-order-animation { width: 280px; height: 280px; }
     }
-    #top-bar a { text-decoration: none !important; border-bottom: none !important; }
-    #top-bar a:hover { text-decoration: none !important; }
   </style>
 </head>
 <body>
-  
-  <div id="top-bar">
-    <div class="top-controls-group">
-        <i id="search-icon-btn" class="ti ti-search" onclick="promptSearch()"></i>
-        <a href="stats.html" aria-label="View Statistics"><i class="ti ti-chart-pie"></i></a>
-    </div>
-    <div id="status-container">
-      <span id="status">Loading...</span>
-      <span id="sync-status-indicator" title="Sync status"></span>
-    </div>
-    <a href="edit.html" class="top-controls-group" aria-label="Edit Deck & Settings"><i class="ti ti-settings"></i></a>
+  <div id="status-container">
+    <span id="status">Loading...</span>
+    <span id="sync-status-indicator" title="Sync status"></span>
   </div>
-
+  <div class="top-left-controls">
+    <a id="search-btn" aria-label="Search Character"><i class="ti ti-search"></i></a>
+    <a href="practice.html" id="practice-btn" aria-label="Free Write Practice"><i class="ti ti-pencil"></i></a>
+  </div>
+  <div class="top-right-controls">
+    <a href="stats.html" id="stats-btn" aria-label="View Statistics"><i class="ti ti-chart-pie"></i></a>
+    <a href="edit.html" id="edit-btn" aria-label="Edit Deck & Settings"><i class="ti ti-settings"></i></a>
+  </div>
+  
   <div class="main-content">
-    
-    <div id="flashcard" onclick="flipCard()">
+    <div id="main-display-wrapper">
+      <div id="char">Loading...</div>
+    </div>
+    <div id="practice-container">
+      <div id="stroke-order-animation"></div>
       
-      <!-- Card header -->
-      <div class="card-header">
-        <!-- Left icons -->
-        <div id="card-actions-left">
-            <i id="delete-btn" class="card-icon-btn ti ti-trash" onclick="deleteCurrentCard(event)" aria-label="Delete Card"></i>
-        </div>
-
-        <!-- Center word -->
-        <div id="card-front" class="card-face"></div>
-        
-        <!-- Right icons -->
-        <div id="card-actions-right">
-            <button id="speak-btn" class="card-icon-btn" onclick="speakWord(event)" aria-label="Speak"><i class="ti ti-volume"></i></button>
-            <i id="dictionary-link-btn" class="card-icon-btn ti ti-external-link" onclick="searchWord(event)" aria-label="Search Dictionary"></i>
-        </div>
+      <div id="practice-controls-main" class="practice-controls-group">
+        <button onclick="animateAllStrokes()">Animate</button>
+        <!-- MODIFIED: Button text changed to "Quiz" -->
+        <button onclick="startPracticeQuiz()">Quiz</button>
+        <button class="close-btn" onclick="showStrokeOrder()">Close</button>
       </div>
-      
-      <!-- Card back -->
-      <div class="card-content-body">
-          <div id="card-back" class="card-face"></div>
-          <div id="dictionary-definition">
-              <!-- API content goes here -->
-          </div>
+
+      <div id="practice-controls-quiz" class="practice-controls-group">
+        <div class="hint-control">
+          <span>Hint</span>
+          <label class="switch">
+            <input type="checkbox" id="hint-toggle-checkbox">
+            <span class="slider round"></span>
+          </label>
+        </div>
+        <button class="end-quiz-btn" onclick="endPracticeQuiz()">End Quiz</button>
       </div>
 
     </div>
-
+    <div id="definitions-container"></div>
   </div>
 
   <div class="footer-controls">
-    <div class="buttons" id="rating-buttons">
+    <div id="char-actions-footer">
+      <button id="speak-btn" onclick="speakCharacter()" aria-label="Speak"><i class="ti ti-volume"></i></button>
+      <button id="stroke-btn" onclick="showStrokeOrder()" aria-label="Show Stroke Order & Practice"><i class="ti ti-writing"></i></button>
+    </div>
+    <div class="buttons">
       <button id="btn-again" class="again" onclick="rate('again')">Again<br><small>...</small></button>
       <button id="btn-good" class="good" onclick="rate('good')">Good<br><small>...</small></button>
       <button id="btn-easy" class="easy" onclick="rate('easy')">Easy<br><small>...</small></button>

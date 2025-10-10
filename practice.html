@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+  <title>Free Write Pad</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+  <style>
+    html, body {
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      margin: 0;
+    }
+    #drawing-canvas {
+      display: block;
+      background-color: #ffffff;
+      cursor: crosshair;
+      touch-action: none; /* Prevents page scrolling while drawing on mobile */
+    }
+    .top-controls {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      right: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      pointer-events: none; /* Allows drawing underneath the container */
+    }
+    .control-button, .back-link {
+      background: none;
+      border: none;
+      color: #333;
+      cursor: pointer;
+      font-size: 24px; /* Consistent icon size */
+      padding: 8px;
+      margin: 0;
+      line-height: 1;
+      transition: color 0.2s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+      text-decoration: none; /* Explicitly remove underline for the link */
+      pointer-events: auto; /* Re-enable clicks on the buttons themselves */
+    }
+    .control-button:hover, .back-link:hover {
+      color: #007aff;
+    }
+    .control-button:active, .back-link:active {
+      transform: scale(0.92);
+    }
+    .right-controls-group {
+        display: flex;
+        gap: 8px; /* Spacing between icons */
+        background-color: #ffffff;
+        padding: 8px 10px; /* Padding inside the white box */
+        border-radius: 25px; /* Fully rounded corners */
+        box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+        pointer-events: auto; /* Enable clicks on the group */
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="drawing-canvas"></canvas>
+
+  <div class="top-controls">
+    <a href="index.html" class="back-link" aria-label="Back to Deck">
+      <i class="ti ti-arrow-left"></i>
+    </a>
+    <div class="right-controls-group">
+      <button id="undo-btn" class="control-button" aria-label="Undo">
+        <i class="ti ti-arrow-back-up"></i>
+      </button>
+      <button id="clear-btn" class="control-button" aria-label="Clear Canvas">
+        <i class="ti ti-trash"></i>
+      </button>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const canvas = document.getElementById('drawing-canvas');
+      const ctx = canvas.getContext('2d');
+
+      let isDrawing = false;
+      let history = [];
+      
+      // --- Canvas Setup ---
+      function resizeCanvas() {
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = window.innerWidth * dpr;
+        canvas.height = window.innerHeight * dpr;
+        canvas.style.width = `${window.innerWidth}px`;
+        canvas.style.height = `${window.innerHeight}px`;
+        
+        ctx.scale(dpr, dpr);
+        
+        // Redraw the last state after resize
+        restoreState(false); 
+      }
+
+      function setupContext() {
+        ctx.strokeStyle = '#111';
+        ctx.lineWidth = 8; // MODIFIED: Increased brush thickness
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+      }
+      
+      // --- Drawing History ---
+      function saveState() {
+        if (history.length > 20) { // Limit history to prevent memory issues
+            history.shift();
+        }
+        history.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
+      }
+
+      function restoreState(pop = true) {
+        if (history.length) {
+          if(pop) history.pop(); // Remove current state
+          if(history.length > 0) {
+             ctx.putImageData(history[history.length - 1], 0, 0);
+          } else {
+             clearCanvas(false);
+          }
+        } else {
+            clearCanvas(false);
+        }
+      }
+
+      function clearCanvas(save = true) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (save) {
+            history = []; // Clear history
+            saveState(); // Save the blank state
+        }
+      }
+
+      // --- Drawing Event Handlers ---
+      function getCoords(event) {
+          if (event.touches && event.touches.length > 0) {
+              return { x: event.touches[0].clientX, y: event.touches[0].clientY };
+          }
+          return { x: event.clientX, y: event.clientY };
+      }
+
+      function startDrawing(e) {
+        isDrawing = true;
+        const { x, y } = getCoords(e);
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+      }
+
+      function draw(e) {
+        if (!isDrawing) return;
+        e.preventDefault(); // Prevent scrolling
+        const { x, y } = getCoords(e);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+      }
+
+      function stopDrawing() {
+        if (isDrawing) {
+            ctx.closePath();
+            saveState();
+            isDrawing = false;
+        }
+      }
+
+      // --- Event Listeners ---
+      canvas.addEventListener('mousedown', startDrawing);
+      canvas.addEventListener('mousemove', draw);
+      canvas.addEventListener('mouseup', stopDrawing);
+      canvas.addEventListener('mouseout', stopDrawing);
+
+      canvas.addEventListener('touchstart', startDrawing);
+      canvas.addEventListener('touchmove', draw);
+      canvas.addEventListener('touchend', stopDrawing);
+
+      document.getElementById('undo-btn').addEventListener('click', () => restoreState());
+      document.getElementById('clear-btn').addEventListener('click', () => clearCanvas());
+
+      window.addEventListener('resize', resizeCanvas);
+      
+      // --- Initial Load ---
+      resizeCanvas();
+      setupContext();
+      clearCanvas(); // Starts with a blank canvas and saves initial state
+    });
+  </script>
+
+</body>
+</html>
