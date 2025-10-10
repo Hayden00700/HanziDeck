@@ -127,6 +127,7 @@ async function flipCard() {
   fetchAndShowDefinition();
 }
 
+// --- UPDATED FUNCTION ---
 function formatDefinitionHtml(data) {
     const entry = data[0];
     if (!entry) return '<p>No definition found.</p>';
@@ -144,6 +145,10 @@ function formatDefinitionHtml(data) {
             html += `<ol class="definitions-list">`;
             meaning.definitions.slice(0, 3).forEach(def => {
                 html += `<li>${def.definition}</li>`;
+                // If there's an example, add it
+                if (def.example) {
+                    html += `<blockquote class="example-sentence">"${def.example}"</blockquote>`;
+                }
             });
             html += `</ol>`;
         }
