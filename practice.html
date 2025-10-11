@@ -95,13 +95,16 @@
         
         ctx.scale(dpr, dpr);
         
-        // Redraw the last state after resize
+        // CRITICAL FIX: Re-apply all drawing settings after the context is reset by a resize.
+        setupContext();
+
+        // Redraw the last state onto the newly sized canvas
         restoreState(false); 
       }
 
       function setupContext() {
         ctx.strokeStyle = '#111';
-        ctx.lineWidth = 8; // MODIFIED: Increased brush thickness
+        ctx.lineWidth = 8;
         ctx.lineJoin = 'round';
         ctx.lineCap = 'round';
       }
@@ -128,7 +131,14 @@
       }
 
       function clearCanvas(save = true) {
+        // Get the current transformation matrix
+        const transform = ctx.getTransform();
+        // Reset the transformation matrix to identity to clear the entire canvas
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        // Restore the transformation matrix
+        ctx.setTransform(transform);
+
         if (save) {
             history = []; // Clear history
             saveState(); // Save the blank state
@@ -183,7 +193,6 @@
       
       // --- Initial Load ---
       resizeCanvas();
-      setupContext();
       clearCanvas(); // Starts with a blank canvas and saves initial state
     });
   </script>
