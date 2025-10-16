@@ -2,7 +2,6 @@ let cards = {}; // To store user progress: { "word": [interval, ease, due] }
 let vocabulary = []; // To store the full list from JSON
 let currentCard = null;
 let isFlipped = false;
-let currentCefrLevel = 'A1';
 const cefrLevels = ['A1', 'A2', 'B1', 'B2', 'C1'];
 
 const synth = window.speechSynthesis;
@@ -11,7 +10,7 @@ const synth = window.speechSynthesis;
 const GIST_PROGRESS_FILENAME = 'oxford_progress.json';
 const LOCAL_STORAGE_KEY = 'vocabularyProgress';
 const GIST_API_BASE = 'https://api.github.com/gists/';
-const VOCABULARY_FILENAME = 'oxford5000.json'; 
+const VOCABULARY_FILENAME = 'oxford5000.json';
 
 const INTERVAL = 0, EASE = 1, DUE = 2;
 const CONSTANTS = {
@@ -37,15 +36,15 @@ function updateSyncStatus(status) {
 
     switch (status) {
         case 'syncing':
-            statusEl.style.backgroundColor = '#f1c40f'; // 黃色
+            statusEl.style.backgroundColor = '#f1c40f'; // Yellow
             statusEl.title = 'Syncing...';
             break;
         case 'success':
-            statusEl.style.backgroundColor = '#2ecc71'; // 綠色
+            statusEl.style.backgroundColor = '#2ecc71'; // Green
             statusEl.title = 'Synced';
             break;
         case 'error':
-            statusEl.style.backgroundColor = '#e74c3c'; // 紅色
+            statusEl.style.backgroundColor = '#e74c3c'; // Red
             statusEl.title = 'Sync Failed';
             break;
         default:
@@ -63,38 +62,35 @@ function displayCard() {
   const flashcard = document.getElementById('flashcard');
   const definitionEl = document.getElementById('dictionary-definition');
   
-  // 圖示按鈕
-  const speakBtn = document.getElementById('speak-btn'); 
+  const speakBtn = document.getElementById('speak-btn');
   const deleteBtn = document.getElementById('delete-btn');
   const dictionaryLinkBtn = document.getElementById('dictionary-link-btn');
 
   isFlipped = false;
   
-  // 重設卡片狀態
   cardFront.style.display = 'block';
-  cardBack.style.display = 'none'; 
-  cardBack.style.opacity = 0; 
+  cardBack.style.display = 'none';
+  cardBack.style.opacity = 0;
   ratingButtons.style.visibility = 'hidden';
-  flashcard.classList.remove('flipped'); 
+  flashcard.classList.remove('flipped');
   definitionEl.style.display = 'none';
   definitionEl.innerHTML = '';
   
-  // 重設圖示可見性
   deleteBtn.style.visibility = 'hidden';
   dictionaryLinkBtn.style.visibility = 'hidden';
 
   if (currentCard) {
     cardFront.textContent = currentCard.english;
     cardBack.textContent = currentCard.chinese;
-    speakBtn.style.visibility = 'visible'; // 卡片正面只顯示發音按鈕
+    speakBtn.style.visibility = 'visible';
     
     if (currentCard.fromSearch) {
         ratingButtons.style.visibility = 'hidden';
     }
   } else {
-    cardFront.textContent = `All cards reviewed for now!`; 
+    cardFront.textContent = `All cards reviewed for now!`;
     cardBack.textContent = '';
-    speakBtn.style.visibility = 'hidden'; // 沒有卡片時隱藏
+    speakBtn.style.visibility = 'hidden';
   }
 }
 
@@ -106,28 +102,24 @@ async function flipCard() {
   const ratingButtons = document.getElementById('rating-buttons');
   const flashcard = document.getElementById('flashcard');
   
-  // 圖示按鈕
   const deleteBtn = document.getElementById('delete-btn');
   const dictionaryLinkBtn = document.getElementById('dictionary-link-btn');
 
   isFlipped = true;
   
-  // 翻轉卡片
-  cardFront.style.display = 'block'; 
+  cardFront.style.display = 'block';
   cardBack.style.display = 'block';
-  cardBack.style.opacity = 1; 
+  cardBack.style.opacity = 1;
   flashcard.classList.add('flipped');
   
-  // 顯示卡片背面的控制項
   ratingButtons.style.visibility = 'visible';
-  deleteBtn.style.visibility = 'visible'; 
+  deleteBtn.style.visibility = 'visible';
   dictionaryLinkBtn.style.visibility = 'visible';
 
   updateButtonLabels();
   fetchAndShowDefinition();
 }
 
-// --- UPDATED FUNCTION ---
 function formatDefinitionHtml(data) {
     const entry = data[0];
     if (!entry) return '<p>No definition found.</p>';
@@ -145,7 +137,6 @@ function formatDefinitionHtml(data) {
             html += `<ol class="definitions-list">`;
             meaning.definitions.slice(0, 3).forEach(def => {
                 html += `<li>${def.definition}</li>`;
-                // If there's an example, add it
                 if (def.example) {
                     html += `<blockquote class="example-sentence">"${def.example}"</blockquote>`;
                 }
@@ -160,21 +151,15 @@ function formatDefinitionHtml(data) {
 
 async function fetchAndShowDefinition() {
     if (!currentCard || !currentCard.english) return;
-
     const word = currentCard.english;
     const definitionEl = document.getElementById('dictionary-definition');
-
     definitionEl.style.display = 'block';
     definitionEl.innerHTML = '<i>Loading definition...</i>';
-
     try {
         const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
-        if (!response.ok) {
-            throw new Error('Definition not found in the dictionary.');
-        }
+        if (!response.ok) throw new Error('Definition not found in the dictionary.');
         const data = await response.json();
         definitionEl.innerHTML = formatDefinitionHtml(data);
-
     } catch (error) {
         console.error('Dictionary API Error:', error);
         definitionEl.innerHTML = `<p>Could not load definition.</p>`;
@@ -184,14 +169,12 @@ async function fetchAndShowDefinition() {
 async function speakWord(event) {
   if (event) event.stopPropagation();
   if (!currentCard || !currentCard.english) return;
-
   try {
     const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${currentCard.english}`);
     const data = await res.json();
     const audioUrl = data[0]?.phonetics?.find(p => p.audio)?.audio;
     if (audioUrl) {
-      const audio = new Audio(audioUrl);
-      audio.play();
+      new Audio(audioUrl).play();
     } else {
       alert("No audio found for this word.");
     }
@@ -202,9 +185,7 @@ async function speakWord(event) {
 }
 
 function searchWord(event) {
-    if (event) {
-        event.stopPropagation();
-    }
+    if (event) event.stopPropagation();
     if (!currentCard || !currentCard.english) return;
     const word = currentCard.english;
     const searchUrl = `https://dictionary.cambridge.org/dictionary/english-chinese-traditional/${word}`;
@@ -212,21 +193,19 @@ function searchWord(event) {
 }
 
 function promptSearch() {
-    const searchWordRaw = prompt("請輸入要查詢的單字 (Enter word to search):");
+    const searchWordRaw = prompt("Please enter a word to search:");
     if (!searchWordRaw) return;
-    
     const searchWord = searchWordRaw.trim();
-    if (searchWord.length > 0) {
+    if (searchWord) {
         searchSpecificWord(searchWord);
     } else {
-        alert("輸入無效！");
+        alert("Invalid input!");
     }
 }
 
 function searchSpecificWord(searchWord) {
     const word = searchWord.toLowerCase();
     const vocabEntry = vocabulary.find(item => item[0].toLowerCase() === word);
-    
     if (vocabEntry) {
         const wordKey = vocabEntry[0];
         if (!cards[wordKey]) {
@@ -243,7 +222,7 @@ function searchSpecificWord(searchWord) {
         displayCard();
         isFlipped = false;
     } else {
-        alert(`找不到單字 "${searchWord}"，請檢查拼寫。`);
+        alert(`Word "${searchWord}" not found. Please check spelling.`);
     }
 }
 
@@ -251,7 +230,7 @@ function deleteCurrentCard(event) {
     if (event) event.stopPropagation();
     if (!currentCard || !currentCard.english) return;
     const wordToDelete = currentCard.english;
-    if (confirm(`確定要永久刪除 "${wordToDelete}" 及其所有學習進度嗎？`)) {
+    if (confirm(`Are you sure you want to permanently delete "${wordToDelete}" and all its progress?`)) {
         delete cards[wordToDelete];
         saveProgress();
         showNextCard();
@@ -261,25 +240,35 @@ function deleteCurrentCard(event) {
 function updateButtonLabels() {
     ['again', 'good', 'easy'].forEach(action => {
         const small = document.getElementById(`btn-${action}`).querySelector('small');
-        if (currentCard) { 
+        if (currentCard) {
             const nextState = calculateNextState(currentCard.data.slice(), action);
             small.textContent = formatInterval(nextState.interval);
         } else {
-            small.textContent = '---';
+            small.textContent = '...';
         }
     });
 }
 
 function updateStatus() {
-  const levelWords = vocabulary.filter(v => v[2] === currentCefrLevel); 
-  const dueNowInLevel = levelWords.filter(v => cards[v[0]] && cards[v[0]][DUE] <= Date.now()).length;
-  const totalDue = Object.values(cards).filter(c => c[DUE] <= Date.now()).length;
-  const totalCards = vocabulary.length;
-  document.getElementById("status").textContent = 
-    `Due: ${dueNowInLevel} / ${levelWords.length} | Total Due: ${totalDue}`;
+  const now = Date.now();
+  let dueCount = 0;
+  let newCount = 0;
+  // We check the full vocabulary list against our progress file.
+  vocabulary.forEach(v => {
+      const cardData = cards[v[0]];
+      if (cardData) { // If a card exists in progress
+          if (cardData[INTERVAL] > 0 && cardData[DUE] <= now) {
+              dueCount++;
+          } else if (cardData[INTERVAL] === 0) {
+              newCount++;
+          }
+      }
+      // If cardData doesn't exist, it means it was deleted and we ignore it.
+  });
+  document.getElementById("status").textContent = `Due: ${dueCount} | New: ${newCount}`;
 }
 
-// --- SRS & Level Progression Logic ---
+// --- SRS Logic ---
 
 function formatInterval(minutes) {
   if (minutes < 60) return `${Math.max(1, Math.round(minutes))}m`;
@@ -292,17 +281,17 @@ function calculateNextState(cardData, action) {
     const currentInterval = cardData[INTERVAL];
     const good = currentInterval < CONSTANTS.MIN_GOOD_INTERVAL ? CONSTANTS.MIN_GOOD_INTERVAL : currentInterval * (cardData[EASE] / 100);
     switch(action) {
-        case "again": 
-            newInterval = CONSTANTS.AGAIN_INTERVAL; 
-            newEase = Math.max(CONSTANTS.MIN_EASE, newEase - CONSTANTS.EASE_PENALTY_AGAIN); 
+        case "again":
+            newInterval = CONSTANTS.AGAIN_INTERVAL;
+            newEase = Math.max(CONSTANTS.MIN_EASE, newEase - CONSTANTS.EASE_PENALTY_AGAIN);
             break;
-        case "good": 
-            newInterval = good; 
+        case "good":
+            newInterval = good;
             break;
-        case "easy": 
+        case "easy":
             const baseInterval = currentInterval < CONSTANTS.MIN_DAY_INTERVAL ? CONSTANTS.MIN_DAY_INTERVAL * CONSTANTS.EASY_INITIAL_DAYS : good * CONSTANTS.EASY_MULTIPLIER;
             newInterval = baseInterval;
-            newEase += CONSTANTS.EASE_BONUS_EASY; 
+            newEase += CONSTANTS.EASE_BONUS_EASY;
             break;
     }
     return { interval: Math.round(newInterval), ease: newEase };
@@ -316,21 +305,7 @@ function rate(action) {
   currentCard.data[DUE] = Date.now() + (interval * 60 * 1000);
   cards[currentCard.english] = currentCard.data;
   saveProgress();
-  checkAndAdvanceLevel(); 
   showNextCard();
-}
-
-function checkAndAdvanceLevel() {
-    const levelWords = vocabulary.filter(v => v[2] === currentCefrLevel);
-    const allReviewed = levelWords.every(v => cards[v[0]] && cards[v[0]][INTERVAL] > 0);
-    if (allReviewed) {
-        const currentIndex = cefrLevels.indexOf(currentCefrLevel);
-        if (currentIndex < cefrLevels.length - 1) {
-            const nextLevel = cefrLevels[currentIndex + 1];
-            currentCefrLevel = nextLevel;
-            localStorage.setItem("currentCefrLevel", currentCefrLevel);
-        }
-    }
 }
 
 // --- Data & State Management ---
@@ -343,7 +318,7 @@ async function saveProgress() {
   const cardsWithOffsets = {};
   for (const word in cards) {
       const data = cards[word];
-      const offsetMinutes = Math.round((data[DUE] - base_time_ms) / 60000); 
+      const offsetMinutes = Math.round((data[DUE] - base_time_ms) / 60000);
       cardsWithOffsets[word] = [data[INTERVAL], data[EASE], offsetMinutes];
   }
   const contentToSave = JSON.stringify({ base_time_ms, cards: cardsWithOffsets });
@@ -359,9 +334,8 @@ async function saveProgress() {
       console.error('[Sync Error] Failed to save to Gist:', error);
       updateSyncStatus('error');
     }
-  } 
+  }
   localStorage.setItem(LOCAL_STORAGE_KEY, contentToSave);
-  localStorage.setItem("currentCefrLevel", currentCefrLevel);
 }
 
 async function loadProgress() {
@@ -381,7 +355,7 @@ async function loadProgress() {
             const processedCards = {};
             for (const word in loadedCards) {
                 const cardData = loadedCards[word];
-                const dueTimestamp = baseTime + (cardData[DUE] * 60000); 
+                const dueTimestamp = baseTime + (cardData[DUE] * 60000);
                 processedCards[word] = [cardData[INTERVAL], cardData[EASE], dueTimestamp];
             }
             cards = processedCards;
@@ -390,7 +364,7 @@ async function loadProgress() {
         }
         dataLoaded = true;
       }
-    } catch (error) { 
+    } catch (error) {
         console.error('[Sync Error] Failed to load from Gist, falling back to local.', error);
         updateSyncStatus('error');
     }
@@ -417,73 +391,90 @@ async function loadProgress() {
       }
       updateSyncStatus();
   }
-  const savedLevel = localStorage.getItem("currentCefrLevel");
-  if (savedLevel && cefrLevels.includes(savedLevel)) {
-    currentCefrLevel = savedLevel;
-  }
 }
 
 function showNextCard() {
-  currentCard = currentCard ? { ...currentCard, fromSearch: false } : null; 
-  const currentLevelVocab = vocabulary.filter(v => v[2] === currentCefrLevel);
-  const dueCards = currentLevelVocab.filter(v => {
-    const word = v[0];
-    return cards[word] && cards[word][DUE] <= Date.now();
-  });
-  if (dueCards.length > 0) {
-    const vocabEntry = dueCards[Math.floor(Math.random() * dueCards.length)];
-    const wordKey = vocabEntry[0];
-    currentCard = { 
-      english: wordKey,
-      chinese: vocabEntry[1],
-      cefr: vocabEntry[2],
-      data: cards[wordKey],
-      fromSearch: false
-    };
-  } else {
-    const allReviewed = currentLevelVocab.every(v => cards[v[0]] && cards[v[0]][INTERVAL] > 0);
-    if (allReviewed) {
-        const oldLevel = currentCefrLevel;
-        checkAndAdvanceLevel(); 
-        if (currentCefrLevel !== oldLevel) {
-            setTimeout(showNextCard, 0); 
-            return;
+    const now = Date.now();
+    let vocabEntryToShow = null;
+
+    // Priority 1: Find all cards due for review across all levels.
+    const dueVocabEntries = vocabulary.filter(v => {
+        const cardData = cards[v[0]];
+        // A card is due if it exists, has been reviewed before, and its due date is in the past.
+        return cardData && cardData[INTERVAL] > 0 && cardData[DUE] <= now;
+    });
+
+    if (dueVocabEntries.length > 0) {
+        // If there are due cards, pick one at random to show.
+        vocabEntryToShow = dueVocabEntries[Math.floor(Math.random() * dueVocabEntries.length)];
+    } else {
+        // Priority 2: If no reviews are due, find the first available new card in CEFR order.
+        for (const level of cefrLevels) {
+            const newCardInLevel = vocabulary.find(v => {
+                const cardData = cards[v[0]];
+                // A card is new if it exists in our progress and its interval is 0.
+                return cardData && cardData[INTERVAL] === 0 && v[2] === level;
+            });
+            if (newCardInLevel) {
+                vocabEntryToShow = newCardInLevel;
+                break; // Found a new card, stop searching.
+            }
         }
     }
-    currentCard = null; 
-  }
-  displayCard();
-  updateStatus();
-  updateButtonLabels();
+
+    if (vocabEntryToShow) {
+        const wordKey = vocabEntryToShow[0];
+        currentCard = {
+            english: wordKey,
+            chinese: vocabEntryToShow[1],
+            cefr: vocabEntryToShow[2],
+            data: cards[wordKey],
+            fromSearch: false
+        };
+    } else {
+        // No due cards and no new cards are left.
+        currentCard = null;
+    }
+
+    displayCard();
+    updateStatus();
+    updateButtonLabels();
 }
 
 async function initializeDeck() {
   const token = localStorage.getItem('ankiAccessToken');
   const id = localStorage.getItem('ankiGistId');
   if (token && id) { updateSyncStatus('syncing'); } else { updateSyncStatus('local'); }
-  await loadProgress(); 
+  
+  await loadProgress(); // Load user's existing progress first
+  
   try {
     const response = await fetch(VOCABULARY_FILENAME);
     if (!response.ok) {
-        throw new Error(`HTTP Status: ${response.status} (${response.statusText}). Check if the file is in the correct directory.`);
+        throw new Error(`HTTP Status: ${response.status} (${response.statusText}).`);
     }
-    const jsonText = await response.text();
-    vocabulary = JSON.parse(jsonText);
-    if (Object.keys(cards).length === 0) { 
-        let newCardsAdded = 0;
+    vocabulary = await response.json();
+    
+    // ** THE FIX IS HERE **
+    // Only populate the deck if the user has no progress at all (first run).
+    if (Object.keys(cards).length === 0) {
+        let needsSave = false;
         vocabulary.forEach(item => {
+          // Add every word from the master list as a new card.
           if (!cards[item[0]]) { 
             cards[item[0]] = [0, 250, Date.now()];
-            newCardsAdded++;
+            needsSave = true;
           }
         });
-        if (newCardsAdded > 0) {
-            saveProgress();
+        if (needsSave) {
+            saveProgress(); // Save this initial deck state.
         }
     }
+    // If cards object is NOT empty, we do nothing, respecting any deletions the user has made.
+
   } catch (error) {
-    console.error(`[Vocab Error] Failed to load vocabulary file (${VOCABULARY_FILENAME}):`, error);
-    document.getElementById('card-front').textContent = `Error: Could not load vocabulary. See console for details.`;
+    console.error(`[Vocab Error] Failed to load or process vocabulary file:`, error);
+    document.getElementById('card-front').textContent = `Error: Could not load vocabulary.`;
   } finally {
     showNextCard();
     document.querySelector('.main-content').style.opacity = 1;
