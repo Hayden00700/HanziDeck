@@ -70,12 +70,16 @@
       font-family: 'Roboto', sans-serif;
       font-size: 1.8rem; font-weight: 400; color: #007bff;
       line-height: 1.5;
+      /* MODIFIED: This line ensures multi-line text is displayed correctly */
+      white-space: pre-wrap;
+      text-align: left; /* Align multi-line text to the left for readability */
     }
     #speak-btn {
       background: none; border: none;
       color: #007bff; font-size: 2.2rem;
       cursor: pointer; padding: 0; line-height: 1;
       transition: color 0.2s;
+      align-self: flex-start; /* Align button to the top of the answer text */
     }
     #speak-btn:hover { color: #0056b3; }
     #no-cards-message { font-size: 1.2rem; color: #777; }

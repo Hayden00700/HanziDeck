@@ -21,9 +21,13 @@
     .deck-selector-group, .new-deck-group { display: flex; gap: 10px; }
     .deck-selector-group select { flex-grow: 1; }
     .new-deck-group input { flex-grow: 1; }
-    select, input[type="text"], input[type="password"] {
+    /* Style for textarea */
+    textarea, select, input[type="text"], input[type="password"] {
       width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px;
-      box-sizing: border-box; font-size: 16px;
+      box-sizing: border-box; font-size: 16px; font-family: inherit; /* Ensure font is consistent */
+    }
+    textarea {
+        resize: vertical; /* Allow vertical resizing */
     }
     .status-message { text-align: center; margin-top: 15px; font-size: 14px; height: 20px; }
     .btn {
@@ -41,6 +45,11 @@
     th, td { padding: 15px; text-align: left; border-bottom: 1px solid #f0f0f0; }
     thead th { background-color: #f8f9fa; font-weight: 600; color: #555; }
     tbody tr:last-child td { border-bottom: none; }
+    /* Added style for multi-line answers in the table view */
+    td[data-label="Answer"] {
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
 
     @media (max-width: 768px) {
       .card { padding: 15px; }
@@ -115,7 +124,8 @@
         <input type="text" id="new-question" placeholder="Question">
       </div>
       <div class="form-group">
-        <input type="text" id="new-answer" placeholder="Answer">
+        <!-- MODIFIED LINE -->
+        <textarea id="new-answer" placeholder="Answer (can be multi-line)" rows="3"></textarea>
       </div>
       <button class="btn btn-blue" onclick="addCard()">Add Card</button>
     </div>
