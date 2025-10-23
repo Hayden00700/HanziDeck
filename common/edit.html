@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Edit Deck & Settings</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      margin: 0; padding: 20px; background-color: #f0f2f5; color: #333;
+    }
+    .container { max-width: 800px; margin: 0 auto; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+    h1 { font-weight: 600; margin: 0; font-size: 28px; }
+    .back-link { font-size: 32px; color: #555; text-decoration: none; line-height: 1; transition: color 0.2s; }
+    .back-link:hover { color: #dc3545; }
+    .card { background: #fff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); padding: 25px; margin-bottom: 25px; }
+    h2 { margin-top: 0; margin-bottom: 20px; text-align: center; font-weight: 500; color: #555; }
+    .form-group { margin-bottom: 15px; }
+    .deck-selector-group, .new-deck-group { display: flex; gap: 10px; }
+    .deck-selector-group select { flex-grow: 1; }
+    .new-deck-group input { flex-grow: 1; }
+    select, input[type="text"], input[type="password"] {
+      width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px;
+      box-sizing: border-box; font-size: 16px;
+    }
+    .status-message { text-align: center; margin-top: 15px; font-size: 14px; height: 20px; }
+    .btn {
+      display: block; width: 100%; padding: 12px; border: none; border-radius: 8px;
+      cursor: pointer; font-size: 16px; font-weight: 600; color: #fff;
+      transition: background-color 0.2s;
+    }
+    .btn:hover { opacity: 0.9; }
+    .btn-green { background-color: #28a745; }
+    .btn-blue { background-color: #007bff; }
+    .btn-red { background-color: #dc3545; }
+    .btn-small { padding: 8px 15px; font-size: 14px; width: auto; display: inline-block; }
+    
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 15px; text-align: left; border-bottom: 1px solid #f0f0f0; }
+    thead th { background-color: #f8f9fa; font-weight: 600; color: #555; }
+    tbody tr:last-child td { border-bottom: none; }
+
+    @media (max-width: 768px) {
+      .card { padding: 15px; }
+      table thead { display: none; }
+      table, tbody, tr, td { display: block; width: 100%; }
+      table tr {
+        margin-bottom: 15px; border: 1px solid #eee; border-radius: 8px;
+        background-color: #fafafa; padding: 15px;
+      }
+      table td {
+        padding: 5px 0; border-bottom: none; text-align: left;
+        font-size: 16px; margin-bottom: 12px;
+      }
+      table td::before {
+        content: attr(data-label); display: block;
+        font-weight: bold; color: #888; font-size: 13px;
+        margin-bottom: 4px; text-transform: uppercase;
+      }
+      table td:not([data-label="Action"]) { word-break: break-word; }
+      table td[data-label="Action"] {
+        margin-bottom: 0; padding-top: 10px; margin-top: 10px;
+        border-top: 1px solid #eee;
+      }
+      table td[data-label="Action"]::before { display: none; }
+      table td[data-label="Action"] .btn { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Edit Deck & Settings</h1>
+      <a href="index.html" class="back-link" aria-label="Back to Main">
+        <i class="ti ti-x"></i>
+      </a>
+    </div>
+
+    <div class="card">
+      <h2>GitHub Gist Sync</h2>
+      <div id="credentials-form">
+        <div class="form-group">
+          <input type="password" id="accessToken" placeholder="GitHub Personal Access Token">
+        </div>
+        <div class="form-group">
+          <input type="text" id="gistId" placeholder="Gist ID">
+        </div>
+        <button class="btn btn-green" onclick="saveCredentials()">Save & Connect</button>
+      </div>
+      <div id="connected-view" style="display: none;">
+        <button class="btn btn-red" onclick="disconnect()">Disconnect</button>
+      </div>
+      <p id="sync-status" class="status-message"></p>
+    </div>
+    
+    <div class="card">
+      <h2>Manage Decks</h2>
+      <div class="form-group deck-selector-group">
+        <select id="deck-selector" onchange="switchDeck(this.value)">
+          <option>Loading decks...</option>
+        </select>
+        <button class="btn btn-red btn-small" onclick="deleteCurrentDeck()">Delete</button>
+      </div>
+      <div class="form-group new-deck-group">
+        <input type="text" id="new-deck-name" placeholder="New deck name...">
+        <button class="btn btn-blue" onclick="addNewDeck()">Create New Deck</button>
+      </div>
+    </div>
+
+    <div class="card" id="add-card-container">
+      <h2 id="add-card-title">Add New Card</h2>
+      <div class="form-group">
+        <input type="text" id="new-question" placeholder="Question">
+      </div>
+      <div class="form-group">
+        <input type="text" id="new-answer" placeholder="Answer">
+      </div>
+      <button class="btn btn-blue" onclick="addCard()">Add Card</button>
+    </div>
+
+    <div class="card" id="deck-list-container">
+      <h2 id="deck-list-title">Your Deck</h2>
+      <div style="overflow-x: auto;">
+        <table>
+          <thead>
+            <tr><th>Question</th><th>Answer</th><th>Interval</th><th>Action</th></tr>
+          </thead>
+          <tbody id="card-list-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <script src="edit.js"></script>
+</body>
+</html>

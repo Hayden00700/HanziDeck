@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Anki Flashcards</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    html { height: 100%; }
+    body {
+      display: flex; flex-direction: column;
+      min-height: 100vh; margin: 0; padding: 0;
+      box-sizing: border-box; background-color: #f7f9fc;
+      font-family: 'Roboto', 'Noto Sans TC', sans-serif;
+    }
+    .top-controls {
+      position: absolute; top: 0; left: 0; right: 0;
+      width: auto; max-width: 800px; margin: 0 auto;
+      padding: 15px; display: flex; justify-content: space-between; align-items: center;
+      z-index: 10;
+    }
+    .status-container {
+      display: flex; align-items: center; gap: 10px; font-size: 16px;
+      background: #fff; padding: 5px 15px; border-radius: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+      flex-wrap: wrap; /* Allow wrapping on small screens */
+    }
+    #deck-name-display { font-weight: 700; }
+    .separator { color: #ccc; }
+    #sync-status-indicator {
+      width: 12px; height: 12px; border-radius: 50%; background-color: #ccc;
+      flex-shrink: 0; /* Prevent shrinking */
+    }
+    .settings-link {
+      font-size: 28px; color: #555; text-decoration: none; transition: color 0.2s;
+    }
+    .settings-link:hover { color: #007bff; }
+
+    .main-content-area {
+      flex: 1; display: flex;
+      align-items: center; justify-content: center;
+      width: 100%; padding: 80px 15px 120px 15px;
+      box-sizing: border-box;
+    }
+
+    .card-container {
+      width: 100%; max-width: 700px;
+      background: #fff; border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      padding: 40px; text-align: center;
+      min-height: 250px;
+      display: flex; flex-direction: column; justify-content: center;
+      transition: background-color 0.2s;
+    }
+    .card-container.clickable { cursor: pointer; }
+    .card-container.clickable:hover { background-color: #f8f9fa; }
+    #question-display {
+      font-family: 'Noto Sans TC', sans-serif;
+      font-size: 2.2rem; font-weight: 500; color: #333;
+      margin-bottom: 20px; line-height: 1.5;
+    }
+    #answer-display {
+      display: none; align-items: center; justify-content: center;
+      gap: 15px; margin-top: 20px;
+      border-top: 1px solid #eee; padding-top: 20px;
+    }
+    #answer-text {
+      font-family: 'Roboto', sans-serif;
+      font-size: 1.8rem; font-weight: 400; color: #007bff;
+      line-height: 1.5;
+    }
+    #speak-btn {
+      background: none; border: none;
+      color: #007bff; font-size: 2.2rem;
+      cursor: pointer; padding: 0; line-height: 1;
+      transition: color 0.2s;
+    }
+    #speak-btn:hover { color: #0056b3; }
+    #no-cards-message { font-size: 1.2rem; color: #777; }
+
+    .footer-controls {
+      position: fixed; bottom: 0; left: 0; width: 100%;
+      background-color: #fff; padding: 20px 0;
+      border-top: 1px solid #e9ecef;
+      display: flex; justify-content: center; align-items: center; gap: 15px;
+      z-index: 10;
+    }
+    .footer-controls button {
+      font-size: 18px; padding: 12px 25px;
+      border: none; border-radius: 8px; color: white;
+      cursor: pointer; transition: opacity 0.2s;
+      min-width: 130px;
+    }
+    .footer-controls button:hover { opacity: 0.85; }
+    #btn-show-answer { background-color: #17a2b8; }
+    .btn-again { background-color: #dc3545; }
+    .btn-good { background-color: #28a745; }
+    .btn-easy { background-color: #007bff; }
+
+    @media (max-width: 600px) {
+      .card-container { padding: 25px; }
+      #question-display { font-size: 1.9rem; }
+      #answer-text { font-size: 1.6rem; }
+      #speak-btn { font-size: 1.9rem; }
+      .footer-controls button {
+        padding: 10px 15px; min-width: 100px; font-size: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="top-controls">
+    <div class="status-container">
+      <span id="deck-name-display">Loading...</span>
+      <span class="separator">|</span>
+      <span id="status">Due: 0 / Total: 0</span>
+      <span id="sync-status-indicator" title="Sync status"></span>
+    </div>
+    <a href="edit.html" class="settings-link" aria-label="Edit Deck & Settings">
+      <i class="ti ti-settings"></i>
+    </a>
+  </div>
+
+  <div class="main-content-area">
+    <div class="card-container">
+      <div id="question-display"><span id="no-cards-message">Loading deck...</span></div>
+      <div id="answer-display">
+        <span id="answer-text"></span>
+        <button id="speak-btn" onclick="handleSpeakButtonClick()" aria-label="Speak Answer">
+          <i class="ti ti-volume"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-controls">
+    <button id="btn-show-answer" onclick="showAnswer()">Show Answer</button>
+    <button id="btn-again" class="btn-again" onclick="rate('again')" style="display: none;">Again<br><small>...</small></button>
+    <button id="btn-good" class="btn-good" onclick="rate('good')" style="display: none;">Good<br><small>...</small></button>
+    <button id="btn-easy" class="btn-easy" onclick="rate('easy')" style="display: none;">Easy<br><small>...</small></button>
+  </div>
+
+  <script src="index.js"></script>
+</body>
+</html>
