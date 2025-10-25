@@ -58,9 +58,12 @@ const getHanziWriterOptions = (char, forPractice) => {
       }
 
       // 1. 檢查快取
-      if (customStrokeDataCache[char]) {
-        return setTimeout(() => onComplete(customStrokeDataCache[char]), 0);
-      }
+		if (customStrokeDataCache[char]) {
+		  // 直接呼叫 setTimeout，不要回傳它的結果
+		  setTimeout(() => onComplete(customStrokeDataCache[char]), 0);
+		  // 你可以選擇性地加上 return 來提早結束這個函式
+		  return; 
+		}
 
       // 2. 嘗試載入自訂的本地檔案
       fetch(customFilePath)
