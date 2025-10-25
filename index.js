@@ -21,79 +21,114 @@ const GIST_API_BASE = 'https://api.github.com/gists/';
 let accessToken = '';
 let gistId = '';
 
-// NEW: 來自 graphicsZhHant.txt 的自訂筆順數據映射表
-let customStrokeDataMap = {};
+// REMOVED: customStrokeDataMap, CUSTOM_CHAR_SET, loadGraphicsData 
 
-// NEW: 異步加載 graphicsZhHant.txt (將處理所有自訂數據)
-async function loadGraphicsData() {
-    try {
-        const response = await fetch("graphicsZhHant.txt");
-        if (!response.ok) {
-            console.warn("graphicsZhHant.txt not found or failed to load. Using default HanziWriter data.");
-            return;
-        }
-        const text = await response.text();
-        // 解析 JSON Lines 格式
-        const lines = text.trim().split('\n');
-        lines.forEach((line, index) => {
-            const trimmedLine = line.trim();
-            if (!trimmedLine) return; // 跳過空行
-            try {
-                const data = JSON.parse(trimmedLine);
-                if (data.character && data.strokes) {
-                    customStrokeDataMap[data.character] = data;
-                } else {
-                    console.warn(`[LoadData] Line ${index + 1}: Parsed data is missing 'character' or 'strokes'.`, data);
-                }
-            } catch (e) {
-                // MODIFIED: 打印更詳細的錯誤信息
-                console.error(`[LoadData Error] Line ${index + 1} (${trimmedLine.substring(0, 50)}...): Failed to parse JSON. Ensure each character's data is on a new line and is valid JSON.`, e);
-            }
-        });
-        console.log(`Loaded custom stroke data for ${Object.keys(customStrokeDataMap).length} characters from file.`);
-    } catch (error) {
-        console.error("Failed to load graphicsZhHant.txt:", error);
-    }
+// NEW: 用於緩存已下載的自訂筆順數據
+const customStrokeDataCache = {};
+// NEW: 自訂筆順檔案的基本路徑 (與 Python 腳本的輸出目錄一致)
+const CUSTOM_STROKE_DATA_BASE_PATH = './strokesZhHant/'; 
+
+/**
+ * 根據字元獲取其在 CUSTOM_STROKE_DATA_BASE_PATH 中的檔案名稱。
+ * @param {string} char - 要查找的字元。
+ * @returns {string|null} 檔案路徑或 null (如果字元無效)。
+ */
+function getCustomStrokeFilePath(char) {
+    if (!char || char.length !== 1) return null;
+    // 將字元轉為十進制 Unicode 編碼 (Code Point)
+    const unicodeDecimal = char.codePointAt(0).toString(10);
+    return `${CUSTOM_STROKE_DATA_BASE_PATH}${unicodeDecimal}.json`;
 }
 
 
-// MODIFIED: 判斷是否需要載入自訂數據
-const getHanziWriterOptions = (char, forPractice) => {
-    let options = {};
-    
-    // 優先級 1: 來自文件的數據
-    const customData = customStrokeDataMap[char];
+// NEW: HanziWriter 官方筆順數據的 CDN 基本路徑
+const HANZI_WRITER_CDN_BASE_PATH = 'https://cdn.jsdelivr.net/npm/hanzi-writer-data@latest/';
 
-    if (customData) {
-        // 使用 charDataLoader 注入自訂數據
-        options.charDataLoader = (charToLoad, onComplete) => {
-            if (charToLoad === char) {
-                setTimeout(() => onComplete(customData), 0);
-            } else {
-                onComplete(null); // 讓 HanziWriter 嘗試使用預設載入器
-            }
-        };
-    }
-    
-    // 設定練習模式或主顯示模式的特定選項
-    if (forPractice) {
-        options = {
-            ...options,
-            width: window.innerWidth < 768 ? 280 : 300, 
-            height: window.innerWidth < 768 ? 280 : 300,
-            padding: 5, showOutline: true, strokeAnimationSpeed: 0.5, delayBetweenStrokes: 100, strokeColor: '#000000', drawingWidth: 40 
-        };
-    } else {
-        options = {
-            ...options,
-            width: window.innerWidth < 768 ? 280 : 350, 
-            height: window.innerWidth < 768 ? 280 : 350,
-            padding: 0, showOutline: false, strokeColor: '#000000'
-        };
-    }
-    
-    return options;
+// MODIFIED: 判斷是否需要載入自訂數據（最終、有效的解決方案）
+const getHanziWriterOptions = (char, forPractice) => {
+  let options = {};
+
+  if (char && char.length === 1) {
+    const customFilePath = getCustomStrokeFilePath(char);
+
+    options.charDataLoader = (character, onComplete) => {
+      // 確保我們處理的是正確的字元
+      if (character !== char) {
+        return onComplete(null);
+      }
+
+      // 1. 檢查快取
+      if (customStrokeDataCache[char]) {
+        return setTimeout(() => onComplete(customStrokeDataCache[char]), 0);
+      }
+
+      // 2. 嘗試載入自訂的本地檔案
+      fetch(customFilePath)
+        .then(response => {
+          if (!response.ok) {
+            // 如果本地檔案不存在或載入失敗，拋出錯誤以進入 .catch 區塊
+            throw new Error(`Custom file not found or failed to load: ${response.status}`);
+          }
+          return response.json();
+        })
+        .then(data => {
+          // 驗證自訂檔案的內容
+          if (data && data.character === char) {
+            console.log(`[HanziWriter] Successfully loaded custom stroke data for ${char}.`);
+            customStrokeDataCache[char] = data; // 存入快取
+            onComplete(data); // 使用自訂資料
+          } else {
+            // 如果檔案內容無效，也拋出錯誤進入 .catch 區塊
+            throw new Error('Custom file data is invalid.');
+          }
+        })
+        .catch(error => {
+          // 3. 執行回退：載入 HanziWriter 官方的 CDN 資料
+          console.info(`[HanziWriter] Custom data for ${char} not found or invalid. Falling back to official CDN data.`);
+          const officialFilePath = `${HANZI_WRITER_CDN_BASE_PATH}${char}.json`;
+          
+          fetch(officialFilePath)
+            .then(response => response.json())
+            .then(data => {
+              customStrokeDataCache[char] = data; // 同樣存入快取，避免下次重複載入
+              onComplete(data); // 使用官方資料
+            })
+            .catch(cdnError => {
+              // 如果連官方 CDN 都失敗了，那就真的沒辦法了
+              console.error(`[HanziWriter] FATAL: Failed to load both custom and official CDN data for ${char}.`, cdnError);
+              onComplete(null); // 最終的失敗
+            });
+        });
+    };
+  }
+
+  // 根據模式設定繪圖參數 (此部分不變)
+  if (forPractice) {
+    options = {
+      ...options,
+      width: window.innerWidth < 768 ? 280 : 300,
+      height: window.innerWidth < 768 ? 280 : 300,
+      padding: 5,
+      showOutline: true,
+      strokeAnimationSpeed: 0.5,
+      delayBetweenStrokes: 100,
+      strokeColor: '#000000',
+      drawingWidth: 40
+    };
+  } else {
+    options = {
+      ...options,
+      width: window.innerWidth < 768 ? 280 : 350,
+      height: window.innerWidth < 768 ? 280 : 350,
+      padding: 0,
+      showOutline: false,
+      strokeColor: '#000000'
+    };
+  }
+
+  return options;
 };
+
 
 const footerControls = document.querySelector('.footer-controls');
 
@@ -469,8 +504,7 @@ function toggleControls(enabled) {
 
 async function initializeDeck() {
   await loadProgress();
-  // NEW: 在初始化 Deck 之前先加載自訂筆順數據
-  await loadGraphicsData(); 
+  // 已移除 loadGraphicsData()，改為按需加載
 
   if (Object.keys(cards).length > 0) {
     const firstCard = Object.values(cards)[0];
