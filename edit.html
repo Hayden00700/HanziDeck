@@ -59,14 +59,25 @@
     .form-group {
       margin-bottom: 15px;
     }
+    /* MODIFIED: Flexbox for profile creation */
+    .form-group.inline {
+        display: flex;
+        gap: 10px;
+    }
+    .form-group.inline input {
+        flex-grow: 1;
+    }
     .form-group input,
-    .form-group textarea {
+    .form-group textarea,
+    /* MODIFIED: Style for select dropdown */
+    .form-group select {
       width: 100%;
       padding: 12px;
       border: 1px solid #ccc;
       border-radius: 8px;
       box-sizing: border-box;
       font-size: 16px;
+      background-color: #fff; /* Ensure select is not transparent */
     }
     .form-group textarea {
         min-height: 100px;
@@ -94,9 +105,8 @@
     .btn:hover { opacity: 0.85; }
     .btn-green { background-color: #2ecc71; }
     .btn-blue { background-color: #3498db; }
-    .btn-red { 
-        background-color: #e74c3c;
-    }
+    .btn-red { background-color: #e74c3c; }
+    .btn-orange { background-color: #f39c12; }
     .btn-small {
         padding: 5px 12px;
         font-size: 14px;
@@ -155,9 +165,24 @@
         <a href="index.html" class="back-link" aria-label="Back to Main"><i class="ti ti-x"></i></a>
     </div>
 
+    <!-- NEW: Profile Management Card -->
+    <div class="settings-card">
+        <h2>Profiles</h2>
+        <div class="form-group">
+            <label for="profile-select" style="display: block; margin-bottom: 5px; color: #555;">Current Profile:</label>
+            <select id="profile-select" onchange="switchProfile()"></select>
+        </div>
+        <div class="form-group inline">
+            <input type="text" id="new-profile-name" placeholder="New profile name">
+            <button class="btn btn-blue" onclick="createProfile()">Create</button>
+        </div>
+        <div class="form-group">
+            <button class="btn btn-red" onclick="deleteProfile()">Delete Current Profile</button>
+        </div>
+    </div>
+
     <div class="settings-card">
       <h2>GitHub Gist Sync</h2>
-      
       <div id="credentials-form">
         <div class="form-group">
           <input type="password" id="accessToken" placeholder="GitHub Personal Access Token">
@@ -167,11 +192,9 @@
         </div>
         <button class="btn btn-green" onclick="saveCredentials()">Save & Connect</button>
       </div>
-
       <div id="connected-view" style="display: none;">
-        <button class="btn btn-red" onclick="disconnect()">Disconnect from Gist</button>
+        <button class="btn btn-orange" onclick="disconnect()">Disconnect from Gist</button>
       </div>
-
       <p id="sync-status" class="status-message"></p>
     </div>
     

@@ -6,7 +6,7 @@
   <title>Hanzi Deck</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.gstatic" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3/dist/hanzi-writer.min.js"></script>
   <style>
@@ -18,40 +18,63 @@
     body {
       display: flex; flex-direction: column;
       align-items: center; margin: 0;
-      padding: 50px 10px 150px 10px;
+      padding: 80px 10px 150px 10px;
       box-sizing: border-box; background-color: #fefefe;
       font-family: "Noto Serif TC", "Microsoft JhengHei", sans-serif;
     }
-    #status-container {
-      position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
-      display: flex; align-items: center; gap: 10px;
-      font-size: 18px; color: #333;
-      white-space: nowrap;
+
+    .app-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 15px;
+      box-sizing: border-box;
+      background-color: #fefefe;
+      border-bottom: 1px solid #eee;
+      z-index: 200;
     }
+
+    /* MODIFIED: Styles for the new nested flex layout */
+    #status-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      text-align: center;
+    }
+    /* NEW: Container for the top line (count + indicator) */
+    .status-line {
+      display: flex;
+      align-items: center;
+      gap: 8px; /* Gap between count and indicator light */
+    }
+    #status {
+      font-size: 16px;
+      color: #333;
+    }
+    /* MODIFIED: Re-enabled the indicator and adjusted its style */
     #sync-status-indicator {
       display: inline-block;
-      width: 12px;
-      height: 12px;
+      width: 10px;
+      height: 10px;
       border-radius: 50%;
       background-color: #ccc;
       border: 1px solid rgba(0,0,0,0.1);
       transition: background-color 0.3s ease;
     }
-
-    .top-left-controls {
-        position: absolute;
-        top: 15px;
-        left: 20px;
-        display: flex;
-        gap: 15px;
+    #profile-display {
+      font-size: 12px;
+      color: #777;
     }
-    
-    .top-right-controls {
-        position: absolute;
-        top: 15px;
-        right: 20px;
-        display: flex;
-        gap: 15px;
+
+    .top-left-controls, .top-right-controls {
+      display: flex;
+      gap: 15px;
+      flex-shrink: 0;
     }
 
     .top-left-controls a,
@@ -176,7 +199,8 @@
     .slider.round:before { border-radius: 50%; }
 
     @media (max-width: 768px) {
-      body { padding: 60px 5px 140px 5px; }
+      body { padding: 70px 5px 140px 5px; }
+      .app-header { padding: 8px 10px; }
       .top-left-controls a,
       .top-right-controls a { font-size: 24px; }
       #main-display-wrapper { min-height: 280px; }
@@ -189,18 +213,27 @@
   </style>
 </head>
 <body>
-  <div id="status-container">
-    <span id="status">Loading...</span>
-    <span id="sync-status-indicator" title="Sync status"></span>
-  </div>
-  <div class="top-left-controls">
-    <a id="search-btn" aria-label="Search Character"><i class="ti ti-search"></i></a>
-    <a href="practice.html" id="practice-btn" aria-label="Free Write Practice"><i class="ti ti-pencil"></i></a>
-  </div>
-  <div class="top-right-controls">
-    <a href="stats.html" id="stats-btn" aria-label="View Statistics"><i class="ti ti-chart-pie"></i></a>
-    <a href="edit.html" id="edit-btn" aria-label="Edit Deck & Settings"><i class="ti ti-settings"></i></a>
-  </div>
+
+  <header class="app-header">
+    <div class="top-left-controls">
+      <a id="search-btn" aria-label="Search Character"><i class="ti ti-search"></i></a>
+      <a href="practice.html" id="practice-btn" aria-label="Free Write Practice"><i class="ti ti-pencil"></i></a>
+    </div>
+    
+    <!-- MODIFIED: Wrapped status and indicator in a dedicated div -->
+    <div id="status-container">
+      <div class="status-line">
+        <span id="status">Loading...</span>
+        <span id="sync-status-indicator" title="Sync status"></span>
+      </div>
+      <span id="profile-display"></span>
+    </div>
+    
+    <div class="top-right-controls">
+      <a href="stats.html" id="stats-btn" aria-label="View Statistics"><i class="ti ti-chart-pie"></i></a>
+      <a href="edit.html" id="edit-btn" aria-label="Edit Deck & Settings"><i class="ti ti-settings"></i></a>
+    </div>
+  </header>
   
   <div class="main-content">
     <div id="main-display-wrapper">
@@ -211,7 +244,6 @@
       
       <div id="practice-controls-main" class="practice-controls-group">
         <button onclick="animateAllStrokes()">Animate</button>
-        <!-- MODIFIED: Button text changed to "Quiz" -->
         <button onclick="startPracticeQuiz()">Quiz</button>
         <button class="close-btn" onclick="showStrokeOrder()">Close</button>
       </div>

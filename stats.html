@@ -23,12 +23,25 @@
       justify-content: space-between;
       align-items: center;
       margin-bottom: 25px;
+      /* MODIFIED: Added flex-wrap for smaller screens */
+      flex-wrap: wrap;
     }
     h1 {
       font-weight: 600;
       color: #333;
       margin: 0;
       font-size: 28px;
+    }
+    /* NEW: Style for the profile name display */
+    h2#profile-name-display {
+        font-size: 18px;
+        font-weight: 500;
+        color: #777;
+        margin: 0;
+        /* Aligns it to the left under the main title on small screens */
+        width: 100%; 
+        order: 3; /* Ensures it appears below the h1 and the close link */
+        margin-top: 5px;
     }
     .back-link {
       font-size: 32px;
@@ -66,6 +79,8 @@
     <div class="header">
         <h1>Statistics</h1>
         <a href="index.html" class="back-link" aria-label="Back to Main"><i class="ti ti-x"></i></a>
+        <!-- NEW: Element to display the current profile name -->
+        <h2 id="profile-name-display">Loading profile...</h2>
     </div>
 
     <div id="charts-card" class="settings-card">
