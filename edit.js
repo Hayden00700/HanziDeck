@@ -50,25 +50,54 @@ function sortTable(column) {
 function deleteCard(char) {
   if (confirm(`Are you sure you want to delete "${char}" from the "${currentProfile}" profile?`)) {
     delete cards[char];
-    saveProgress();
+    // Keep saveProgress() call without arguments (syncToCloud=true by default)
+    saveProgress(); 
     renderCardTable();
   }
 }
 
+// MODIFIED: Updated handleBulkAdd to only add NEW cards, not reset existing ones.
 function handleBulkAdd() {
     const text = document.getElementById('bulk-add-text').value;
     if (!text.trim()) return alert('Text area is empty.');
-    const chars = [...new Set(text.split(''))];
-    let addedCount = 0, resetCount = 0;
+    // 使用 Set 確保字符唯一性，並將其轉換為陣列
+    const chars = [...new Set(text.split(''))]; 
+    let addedCount = 0;
+    let ignoredCount = 0; // 追蹤被忽略的現有卡片
+
     chars.forEach(char => {
-        if (char.trim().length !== 1 || !/\p{Script=Han}/u.test(char)) return;
-        if (cards[char]) resetCount++;
-        else addedCount++;
-        cards[char] = [0, 250, Date.now()];
+        // 過濾非單一漢字
+        if (char.trim().length !== 1 || !/\p{Script=Han}/u.test(char)) return; 
+        
+        if (cards[char]) {
+            // If card exists, do NOT reset it, just ignore.
+            ignoredCount++;
+            return; // 跳過此輪，保持現有卡片的進度
+        } else {
+            // Card is new
+            addedCount++;
+            // Add new card with initial state (Interval: 0, Ease: 250, Due: now)
+            cards[char] = [0, 250, Date.now()];
+        }
     });
+
+    // Keep saveProgress() call without arguments (syncToCloud=true by default)
     saveProgress();
     renderCardTable();
-    alert(`Process complete for profile "${currentProfile}".\nNew cards: ${addedCount}\nExisting cards reset: ${resetCount}`);
+    
+    // MODIFIED: Simplified the alert message
+    if (addedCount > 0) {
+        if (ignoredCount > 0) {
+             alert(`Process complete for profile "${currentProfile}".\nNew cards added: ${addedCount}\nCharacters already in deck: ${ignoredCount}`);
+        } else {
+             alert(`Process complete for profile "${currentProfile}".\nNew cards added: ${addedCount}`);
+        }
+    } else if (ignoredCount > 0) {
+        alert(`Process complete for profile "${currentProfile}".\nAll ${ignoredCount} characters were already in the deck.`);
+    } else {
+        alert('No valid new characters were found in the input.');
+    }
+    
     document.getElementById('bulk-add-text').value = '';
 }
 
@@ -120,20 +149,22 @@ async function updateSyncStatus() {
     }
 }
 
-async function saveProgress() {
+// MODIFIED: saveProgress for edit.js is designed for immediate sync (syncToCloud=true by default)
+async function saveProgress(syncToCloud = true) {
   const token = localStorage.getItem('ankiAccessToken');
   const id = localStorage.getItem('ankiGistId');
   const base_time_ms = Date.now();
   const cardsWithOffsets = {};
   for (const char in cards) {
       const data = cards[char];
-      const offsetMinutes = Math.round((data[DUE] - base_time_ms) / 60000);
+      // Note: data[DUE] is timestamp, cardData[DUE] in offsetMinutes is the minute offset
+      const offsetMinutes = Math.round((data[DUE] - base_time_ms) / 60000); 
       cardsWithOffsets[char] = [data[INTERVAL], data[EASE], offsetMinutes];
   }
   const contentToSave = JSON.stringify({ base_time_ms, cards: cardsWithOffsets });
   const fileName = `${currentProfile}.json`;
 
-  if (token && id) {
+  if (syncToCloud && token && id) {
     try {
       await fetch(`${GIST_API_BASE}${id}`, {
         method: 'PATCH', headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
@@ -144,6 +175,7 @@ async function saveProgress() {
       alert('Failed to sync progress. Changes saved locally.');
     }
   }
+  // Always save locally
   localStorage.setItem(`ankiCards_${currentProfile}`, contentToSave);
 }
 
@@ -291,6 +323,8 @@ async function createProfile() {
     localStorage.setItem('ankiCurrentProfile', newName);
     
     // Create an empty local deck for the new profile
+    // Note: The structure here is simplified compared to the full card structure, 
+    // but the next loadProgress will correct the profile if needed.
     localStorage.setItem(`ankiCards_${newName}`, JSON.stringify({}));
     
     // MODIFIED: Sync the updated profile list to the Gist

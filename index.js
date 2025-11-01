@@ -22,6 +22,14 @@ const GIST_API_BASE = 'https://api.github.com/gists/';
 let accessToken = '';
 let gistId = '';
 
+// NEW: Debounce and Max Delay variables
+let saveProgressTimer = null;
+let lastSyncTime = 0; // Tracks the timestamp of the last *successful* cloud sync
+let hasPendingChanges = false; // Tracks if there are local changes waiting for sync
+
+const SAVE_PROGRESS_DELAY_MS = 3000; // 3 seconds debounce delay
+const SAVE_PROGRESS_MAX_DELAY_MS = 10000; // 10 seconds max delay
+
 const customStrokeDataCache = {};
 const CUSTOM_STROKE_DATA_BASE_PATH = './strokesZhHant/'; 
 const HANZI_WRITER_CDN_BASE_PATH = 'https://cdn.jsdelivr.net/npm/hanzi-writer-data@latest/';
@@ -35,14 +43,13 @@ function getCustomStrokeFilePath(char) {
 const getHanziWriterOptions = (char, forPractice) => {
   let options = {};
   if (char && char.length === 1) {
-    const customFilePath = getCustomStrokeFilePath(char);
     options.charDataLoader = (character, onComplete) => {
       if (character !== char) return onComplete(null);
       if (customStrokeDataCache[char]) {
 		  setTimeout(() => onComplete(customStrokeDataCache[char]), 0);
 		  return; 
 		}
-      fetch(customFilePath)
+      fetch(getCustomStrokeFilePath(char))
         .then(response => {
           if (!response.ok) throw new Error(`Custom file not found: ${response.status}`);
           return response.json();
@@ -139,7 +146,7 @@ function updateSyncStatus(status) {
   }
 }
 
-// MODIFIED: saveToCloud is now profile-aware
+// MODIFIED: saveToCloud is now profile-aware and updates sync state
 async function saveToCloud() {
   if (!accessToken || !gistId) return;
 
@@ -162,6 +169,11 @@ async function saveToCloud() {
     if (!patchResponse.ok) throw new Error(`HTTP error! Status: ${patchResponse.status}`);
     lastKnownETag = patchResponse.headers.get('ETag');
     updateSyncStatus('success');
+    
+    // NEW: Update tracking variables on successful sync
+    lastSyncTime = Date.now();
+    hasPendingChanges = false; 
+
   } catch (error) {
     console.error('Failed to save to Gist:', error);
     updateSyncStatus('error');
@@ -197,7 +209,7 @@ async function loadFromCloud() {
         } else {
           cards = parsedData || {};
         }
-      } else { cards = {}; }
+      } else { cards = {}; } // File not found in Gist, start with an empty deck for this profile
     } else { cards = {}; } // File not found in Gist, start with an empty deck for this profile
     updateSyncStatus('success');
     return true;
@@ -234,31 +246,66 @@ function loadProfileData() {
     document.getElementById('profile-display').textContent = `Profile: ${currentProfile}`;
 }
 
-
+// MODIFIED: getChineseVoice with enhanced robustness for Android TTS loading issues
 function getChineseVoice() {
   if (chineseVoicePromise) return chineseVoicePromise;
+  
   chineseVoicePromise = new Promise((resolve) => {
     const findVoice = () => {
       const voices = synth.getVoices();
       if (voices.length > 0) {
-        const foundVoice = voices.find(v => v.name === 'Google 國語（台灣）') || voices.find(v => v.lang === 'zh-TW');
-        resolve(foundVoice || null);
+        // 嘗試匹配 'Google 國語（台灣）' 或 'zh-TW'
+        const foundVoice = voices.find(v => v.name === 'Google 國語（台灣）') || voices.find(v => v.lang.startsWith('zh-TW'));
+        // Fallback: 找不到特定中文語音時，退回到第一個中文語音或 null
+        if (foundVoice) {
+            resolve(foundVoice);
+        } else {
+            const zhVoice = voices.find(v => v.lang.startsWith('zh'));
+            resolve(zhVoice || null);
+        }
+      } else {
+        // Voices not loaded yet, wait for the event
+        if (synth.onvoiceschanged !== undefined) {
+             synth.onvoiceschanged = findVoice;
+        }
+        // Add a fallback check if the event fails to fire immediately on some devices
+        setTimeout(findVoice, 100); 
       }
     };
+    
+    // Check immediately
     findVoice();
-    if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = findVoice;
   });
+  
   return chineseVoicePromise;
 }
 
+// MODIFIED: speakCharacter with enhanced robustness and error handler
 async function speakCharacter() {
   if (!currentCard || !currentCard.char) return;
   if (synth.speaking) synth.cancel();
-  const chineseVoice = await getChineseVoice();
+  
+  // Await the voice promise to ensure the voice object is loaded
+  const chineseVoice = await getChineseVoice(); 
+  
   const utterance = new SpeechSynthesisUtterance(currentCard.char);
-  if (chineseVoice) utterance.voice = chineseVoice;
-  utterance.lang = 'zh-TW';
+  
+  if (chineseVoice) {
+      utterance.voice = chineseVoice;
+      utterance.lang = chineseVoice.lang; // Use the actual voice's language setting
+  } else {
+      // Fallback if no specific Chinese voice is found
+      utterance.lang = 'zh-TW'; 
+  }
   utterance.rate = 0.8;
+  
+  // NEW: Add event listener to debug
+  utterance.onerror = (event) => {
+    console.error('SpeechSynthesis Utterance failed:', event.error);
+    // Optional: Alert user only if not in a critical path
+    // alert('Failed to speak character. Check system TTS settings.'); 
+  };
+
   synth.speak(utterance);
   if (!isPracticeVisible) fetchAndDisplayDetails(currentCard.char);
 }
@@ -374,12 +421,9 @@ function formatInterval(minutes) {
   return hours < 24 ? `${Math.round(hours)}h` : `${Math.round(hours / 24)}d`;
 }
 
-// MODIFIED: saveProgress is now profile-aware
-async function saveProgress() {
-  if (accessToken && gistId) {
-    updateSyncStatus('syncing');
-    await saveToCloud();
-  }
+// MODIFIED: saveProgress logic for Debounce and Max Delay
+async function saveProgress(syncToCloud = true) {
+  // 1. Always save to local storage immediately
   const base_time_ms = Date.now();
   const cardsWithOffsets = {};
   for (const char in cards) {
@@ -389,6 +433,33 @@ async function saveProgress() {
   }
   // Save to a profile-specific key
   localStorage.setItem(`ankiCards_${currentProfile}`, JSON.stringify({ base_time_ms, cards: cardsWithOffsets }));
+
+  // 2. Manage Gist sync
+  if (syncToCloud && accessToken && gistId) {
+    hasPendingChanges = true; // Mark that a change is waiting for cloud sync
+    const now = Date.now();
+    const timeSinceLastSync = now - lastSyncTime;
+    
+    // Check for max delay condition
+    if (timeSinceLastSync >= SAVE_PROGRESS_MAX_DELAY_MS) {
+        // Max delay reached, force immediate sync (clear timer, then run)
+        clearTimeout(saveProgressTimer);
+        updateSyncStatus('syncing');
+        await saveToCloud(); // Await forced sync to ensure it happens before next check
+        return; 
+    }
+    
+    // Standard debounce logic
+    clearTimeout(saveProgressTimer); // Reset the debounce timer
+    updateSyncStatus('syncing');     // Immediately show syncing status
+    saveProgressTimer = setTimeout(async () => {
+      await saveToCloud();
+    }, SAVE_PROGRESS_DELAY_MS);
+    
+  } else if (!syncToCloud && accessToken && gistId) {
+    // This handles forced sync (e.g., initialization or beforeunload)
+    await saveToCloud();
+  }
 }
 
 // MODIFIED: loadProgress is now profile-aware
@@ -459,7 +530,7 @@ async function initializeDeck() {
         newCards[char] = [ oldCard.interval || 0, oldCard.ease || 250, oldCard.due || Date.now() ];
       }
       cards = newCards;
-      await saveProgress(); 
+      await saveProgress(false); // Force immediate save/sync after migration
     }
   }
   try {
@@ -474,7 +545,7 @@ async function initializeDeck() {
           }
           return count;
         }, 0);
-        if (newCardsAdded > 0) await saveProgress();
+        if (newCardsAdded > 0) await saveProgress(false); // Force immediate save/sync for new cards
     }
   } catch (error) { console.error("chars.txt not found.", error); } 
   finally {
@@ -533,16 +604,46 @@ function rate(action) {
   currentCard.data[EASE] = ease;
   currentCard.data[DUE] = Date.now() + minutesToMs(interval);
   cards[currentCard.char] = currentCard.data;
+  
+  // MODIFIED: saveProgress now calls with syncToCloud = true (default)
+  // This will save locally immediately and set a debounce/max-delay timer for Gist sync
   saveProgress(); 
   showNextCard();
+}
+
+// NEW: Function to handle page closure or backgrounding to prevent data loss
+function handlePageUnload() {
+    if (hasPendingChanges && accessToken && gistId) {
+        // Clear any pending debounced sync
+        if (saveProgressTimer) {
+             clearTimeout(saveProgressTimer);
+        }
+        // Force an immediate, non-debounced sync
+        // Using `saveProgress(false)` here forces the immediate cloud save path in saveProgress.
+        saveProgress(false); 
+    }
 }
 
 // Initial page load sequence
 loadCredentials();
 // MODIFIED: Load profile data first
 loadProfileData();
+
+// NEW: Reset lastSyncTime on load to ensure max-delay works right away if needed
+lastSyncTime = Date.now(); 
+
+// Attach listeners to prevent data loss:
+// 1. Beforeunload (for closing tab/browser)
+window.addEventListener('beforeunload', handlePageUnload);
+
+// 2. Visibility change (for switching tabs/apps on mobile)
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+        handlePageUnload();
+    }
+});
+
 document.getElementById('search-btn').addEventListener('click', searchForChar);
-getChineseVoice();
 initializeDeck();
 
 document.getElementById('hint-toggle-checkbox').addEventListener('change', (event) => {
