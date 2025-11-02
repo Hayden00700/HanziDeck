@@ -27,8 +27,8 @@ let saveProgressTimer = null;
 let lastSyncTime = 0; // Tracks the timestamp of the last *successful* cloud sync
 let hasPendingChanges = false; // Tracks if there are local changes waiting for sync
 
-const SAVE_PROGRESS_DELAY_MS = 3000; // 3 seconds debounce delay
-const SAVE_PROGRESS_MAX_DELAY_MS = 10000; // 10 seconds max delay
+const SAVE_PROGRESS_DELAY_MS = 5000; // 5 seconds debounce delay
+const SAVE_PROGRESS_MAX_DELAY_MS = 20000; // 20 seconds max delay
 
 const customStrokeDataCache = {};
 const CUSTOM_STROKE_DATA_BASE_PATH = './strokesZhHant/'; 
