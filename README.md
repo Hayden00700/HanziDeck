@@ -7,6 +7,18 @@
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Status](https://img.shields.io/badge/status-Active-green.svg)
 
+## 📸 畫面預覽 (Screenshots)
+
+| 主畫面 (Review) | 練習模式 (Practice) |
+| :---: | :---: |
+| <img src="screenshots/main.png" width="300" alt="Main Interface"> | <img src="screenshots/practice.png" width="300" alt="Practice Mode"> |
+| **顯示卡片與筆順動畫** | **手寫描紅與測驗** |
+
+| 統計數據 (Stats) |
+| :---: |
+| <img src="screenshots/stats.png" width="300" alt="Statistics"> |
+| **學習熟練度分佈** |
+
 ## ✨ 主要功能
 
 *   **🧠 間隔重複系統 (SRS)**：基於 SM-2 演算法變體（類似 Anki），根據你的熟練度（Again, Good, Easy）自動安排複習時間。
