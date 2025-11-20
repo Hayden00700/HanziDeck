@@ -1,74 +1,68 @@
-# Hanzi Deck (漢字卡)
+# 🀄 Hanzi Deck - 網頁版漢字記憶卡
 
-**Hanzi Deck** 是一個極簡、現代化的網頁版漢字學習工具。它採用了類似 Anki 的**間隔重複系統 (Spaced Repetition System, SRS)**，幫助您高效、科學地記憶漢字。所有進度皆可透過 GitHub Gist 在您的不同裝置間無縫同步。
+這是一個基於 Web 的間隔重複系統 (SRS) 應用程式，專為學習漢字設計。它結合了 **Anki 風格的記憶演算法**、**筆順動畫/書寫練習**、**語音朗讀**以及 **萌典 (Moedict)** 的釋義功能。
+
+此專案是純前端應用 (Serverless)，利用 **GitHub Gist** 作為雲端資料庫，實現跨裝置進度同步。
+
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Status](https://img.shields.io/badge/status-Active-green.svg)
 
 ## ✨ 主要功能
 
-*   **智慧複習系統 (SRS)**：根據您的記憶曲線，自動安排每個漢字的最佳複習時間。
-*   **多使用者配置 (Multi-Profile)**：您可以建立多個獨立的學習配置（Profile），例如為不同教材或學習者建立專屬的字卡庫與進度，且所有配置都會同步。
-*   **雲端同步**：只需一個 GitHub Gist，即可在電腦、手機、平板之間安全地同步您所有的學習配置和進度，永不遺失。
-*   **筆順動畫與練習**：整合強大的 `hanzi-writer` 引擎，提供每個漢字的標準筆順動畫，並設有描摹測驗模式，加深肌肉記憶。
-*   **內建字典查詢**：在學習時點擊發音按鈕，即可即時查詢該字的注音、詞性、定義與例句（資料來源：[萌典 API](https://www.moedict.tw/)）。
-*   **學習統計**：提供視覺化圖表，清晰展示您的字卡熟練度分佈以及未來一週的複習量預測。
-*   **字卡庫管理**：支援批次新增漢字，並可在編輯頁面中查看、排序、刪除字卡。
-*   **自由書寫板**：提供一個獨立的畫布頁面，讓您隨時可以自由練習寫字。
+*   **🧠 間隔重複系統 (SRS)**：基於 SM-2 演算法變體（類似 Anki），根據你的熟練度（Again, Good, Easy）自動安排複習時間。
+*   **✍️ 筆順動畫與練習**：
+    *   整合 `HanziWriter`，顯示正確的筆順動畫。
+    *   **手寫練習模式**：在畫布上描紅或自由書寫，支援自動評分與提示。
+    *   **自由塗鴉板**：提供空白畫布進行自由書寫練習。
+*   **🗣️ 語音朗讀 (TTS)**：使用瀏覽器的語音合成 API 朗讀單字（支援台灣國語/普通話發音）。
+*   **📚 內建字典**：整合 [萌典 (Moedict)](https://www.moedict.tw/) API，自動載入注音、部首、釋義與例句。
+*   **☁️ 雲端同步**：
+    *   支援 **GitHub Gist Sync**。
+    *   資料可跨裝置（電腦、平板、手機）同步。
+    *   包含防衝突機制與 Debounce 存檔優化。
+*   **👥 多設定檔 (Profiles)**：支援建立多個使用者或不同學習主題的設定檔。
+*   **📊 統計圖表**：視覺化顯示學習熟練度分佈與未來 7 天的複習預測。
 
-## 🚀 如何使用
+## 🚀 快速開始
 
-您可以直接在瀏覽器中開啟 `index.html` 來使用本應用。為了獲得最佳體驗（特別是 API 功能），建議透過本地伺服器運行。
+### 1. 安裝與執行
+由於這是純靜態網頁，你不需要安裝 Node.js 或 Python。
 
-### 基本操作
+1.  Clone 此專案。
+2.  直接用瀏覽器打開 `index.html` 即可使用。
+3.  **推薦**：使用 GitHub Pages 託管，即可在任何地方透過網址存取。
 
-1.  **複習**：在主畫面，系統會顯示當前到期的字卡。根據您對漢字的熟悉程度，點擊下方的三個按鈕之一：
-    *   **Again (忘記)**：短期內會再次出現。
-    *   **Good (記得)**：根據當前間隔，安排下一次複習。
-    *   **Easy (簡單)**：大幅延長下一次複習的間隔。
-2.  **查詢定義**：點擊發音按鈕，除了播放發音外，下方會自動載入該字的詳細定義。
-3.  **練習筆順**：點擊筆順按鈕，進入該字的練習模式，您可以觀看動畫或進行描摹測驗。
+### 2. 設定雲端同步 (GitHub Gist)
+為了在不同裝置間同步進度，請依照以下步驟設定：
 
-### ⚙️ 設定雲端同步 (GitHub Gist)
+1.  登入你的 GitHub 帳號。
+2.  前往 [GitHub Settings > Developer settings > Personal access tokens](https://github.com/settings/tokens)。
+3.  建立一個新的 Token (Classic)，勾選 **`gist`** 權限，並複製產生的 Token。
+4.  前往 [gist.github.com](https://gist.github.com/) 建立一個新的 Gist（內容可留空或是寫個 `{}`），並複製網址列末端的 **Gist ID**。
+5.  打開本應用程式，點擊右上角的 **設定 (Settings)** 圖示。
+6.  在 "GitHub Gist Sync" 區塊填入 **Token** 與 **Gist ID** 並儲存。
 
-這是本工具的核心功能之一。透過簡單設定，您可以將所有學習資料備份到雲端並在多裝置間同步。
+## 📖 操作說明
 
-**前置需求：** 一個 GitHub 帳號。
+### 主畫面
+*   **Search (🔍)**：搜尋特定漢字，若字卡不存在可直接新增。
+*   **Practice (✏️)**：進入自由手寫板模式。
+*   **Stats (📊)**：查看學習統計數據。
+*   **Settings (⚙️)**：編輯牌組、設定雲端同步、管理設定檔。
 
-#### **第一步：建立 Personal Access Token (PAT)**
+### 學習模式
+1.  畫面顯示漢字（或提示）。
+2.  點擊 **筆順 (Writing)** 圖示可查看動畫或進行測驗。
+3.  點擊 **發音 (Volume)** 圖示聽取讀音。
+4.  根據記憶情況評分：
+    *   **Again**：忘記了，稍後重來。
+    *   **Good**：記得，間隔將稍微拉長。
+    *   **Easy**：非常熟悉，間隔將大幅拉長。
 
-1.  前往 GitHub [**Tokens (classic)**](https://github.com/settings/tokens?type=beta) 頁面。
-2.  點擊 "Generate new token"，選擇 "Generate new token (classic)"。
-3.  **Note**：給您的 Token 取一個好記的名字，例如 `hanzi-deck-sync`。
-4.  **Expiration**：設定一個有效期，例如 90 天或 `No expiration` (不建議)。
-5.  **Select scopes**：**最重要的一步！** 只需勾選 `gist` 權限即可。**請勿授予更多權限**。
-    
-6.  點擊頁面底部的 "Generate token"。
-7.  **立即複製產生的 Token！** 這個 Token 只會顯示一次，請妥善保管。
+### 編輯模式
+*   **Bulk Add**：貼上一串漢字（例如：「天地玄黃」）即可批量新增卡片。
+*   **Profile Management**：可在此切換、新增或刪除設定檔。
 
-#### **第二步：建立一個 Secret Gist**
+## 📄 授權
 
-1.  前往 [gist.github.com](https://gist.github.com/)。
-2.  **Gist description...**：可選填，例如 `Hanzi Deck Data`。
-3.  **Filename including extension...**：輸入 `profiles.json`。
-4.  **File content...**：輸入 `["Default"]`。
-5.  **最重要的一步！** 點擊 "Create secret gist" 按鈕。這確保只有您自己能看到您的學習資料。
-    
-6.  建立後，瀏覽器網址列會是 `https://gist.github.com/YourUsername/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`。複製網址中那串長長的 **ID**。
-
-#### **第三步：在應用程式中設定**
-
-1.  回到 Hanzi Deck，點擊右上角的設定圖示進入編輯頁面。
-2.  在 "GitHub Gist Sync" 區塊：
-    *   貼上您在**第一步**複製的 **Personal Access Token**。
-    *   貼上您在**第二步**複製的 **Gist ID**。
-3.  點擊 "Save & Connect"。
-4.  頁面將會自動重新整理。如果一切順利，狀態會顯示 "Successfully connected to Gist."，主畫面的狀態指示燈會變為綠色。
-
-設定完成後，您所有的學習進度（包括新增、刪除、切換 Profile）都會自動同步。
-
-### 🧑‍🤝‍🧑 使用者配置管理 (Profile)
-
-在設定頁面，您可以管理多個獨立的學習配置。
-
-*   **切換配置**：從下拉選單中選擇您想學習的 Profile，頁面將自動重新載入該進度。
-*   **建立配置**：在輸入框中填寫新配置的名稱，點擊 "Create"，應用會立即建立並切換到該 Profile。
-*   **刪除配置**：點擊 "Delete Current Profile" 按鈕可刪除**當前**選中的配置。**此操作會同時刪除雲端和本地的資料，且無法復原，請謹慎操作！**
-
+本專案採用 MIT License 開源授權。
