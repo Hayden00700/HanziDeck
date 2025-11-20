@@ -243,38 +243,59 @@ function loadProfileData() {
         localStorage.setItem('ankiCurrentProfile', currentProfile);
     }
     
-    document.getElementById('profile-display').textContent = `Profile: ${currentProfile}`;
+    const profileDisplay = document.getElementById('profile-display');
+    if (profileDisplay) {
+        profileDisplay.textContent = `Profile: ${currentProfile}`;
+    }
 }
 
-// MODIFIED: getChineseVoice with enhanced robustness for Android TTS loading issues
+// MODIFIED: getChineseVoice with timeout/race condition to prevent hanging
 function getChineseVoice() {
   if (chineseVoicePromise) return chineseVoicePromise;
   
   chineseVoicePromise = new Promise((resolve) => {
+    let resolved = false;
+
     const findVoice = () => {
+      if (resolved) return;
       const voices = synth.getVoices();
       if (voices.length > 0) {
         // 嘗試匹配 'Google 國語（台灣）' 或 'zh-TW'
         const foundVoice = voices.find(v => v.name === 'Google 國語（台灣）') || voices.find(v => v.lang.startsWith('zh-TW'));
         // Fallback: 找不到特定中文語音時，退回到第一個中文語音或 null
+        resolved = true;
         if (foundVoice) {
             resolve(foundVoice);
         } else {
             const zhVoice = voices.find(v => v.lang.startsWith('zh'));
             resolve(zhVoice || null);
         }
-      } else {
-        // Voices not loaded yet, wait for the event
-        if (synth.onvoiceschanged !== undefined) {
-             synth.onvoiceschanged = findVoice;
-        }
-        // Add a fallback check if the event fails to fire immediately on some devices
-        setTimeout(findVoice, 100); 
       }
     };
     
-    // Check immediately
+    // 1. Check immediately
     findVoice();
+
+    // 2. Wait for event
+    if (!resolved) {
+        if (synth.onvoiceschanged !== undefined) {
+             synth.onvoiceschanged = findVoice;
+        }
+        // Fallback check
+        const intervalId = setInterval(() => {
+             if (resolved) clearInterval(intervalId);
+             else findVoice();
+        }, 100);
+    }
+
+    // 3. Timeout safety: If voices don't load in 500ms, just use default
+    setTimeout(() => {
+        if (!resolved) {
+            resolved = true;
+            console.warn("Voice loading timed out, using default.");
+            resolve(null);
+        }
+    }, 500);
   });
   
   return chineseVoicePromise;
@@ -283,27 +304,32 @@ function getChineseVoice() {
 // MODIFIED: speakCharacter with enhanced robustness and error handler
 async function speakCharacter() {
   if (!currentCard || !currentCard.char) return;
-  if (synth.speaking) synth.cancel();
   
-  // Await the voice promise to ensure the voice object is loaded
-  const chineseVoice = await getChineseVoice(); 
+  // Cancel any current speech immediately
+  synth.cancel();
   
   const utterance = new SpeechSynthesisUtterance(currentCard.char);
   
-  if (chineseVoice) {
-      utterance.voice = chineseVoice;
-      utterance.lang = chineseVoice.lang; // Use the actual voice's language setting
-  } else {
-      // Fallback if no specific Chinese voice is found
-      utterance.lang = 'zh-TW'; 
+  try {
+      // Await the voice promise to ensure the voice object is loaded
+      const chineseVoice = await getChineseVoice(); 
+      if (chineseVoice) {
+          utterance.voice = chineseVoice;
+          utterance.lang = chineseVoice.lang; // Use the actual voice's language setting
+      } else {
+          // Fallback if no specific Chinese voice is found
+          utterance.lang = 'zh-TW'; 
+      }
+  } catch (e) {
+      // Safety fallback
+      utterance.lang = 'zh-TW';
   }
+
   utterance.rate = 0.8;
   
   // NEW: Add event listener to debug
   utterance.onerror = (event) => {
     console.error('SpeechSynthesis Utterance failed:', event.error);
-    // Optional: Alert user only if not in a critical path
-    // alert('Failed to speak character. Check system TTS settings.'); 
   };
 
   synth.speak(utterance);
@@ -344,32 +370,42 @@ async function fetchAndDisplayDetails(char) {
   } catch (error) { console.error("Moedict API failed:", error); container.innerHTML = `<h4>API call failed</h4>`; }
 }
 
+// MODIFIED: Fix for blank practice screen
 function showStrokeOrder() {
   const mainDisplayWrapper = document.getElementById('main-display-wrapper');
   const practiceContainer = document.getElementById('practice-container');
   const definitionsEl = document.getElementById('definitions-container');
   
   if (isPracticeVisible) {
+    // Close Practice Mode
     practiceContainer.style.display = 'none';
     mainDisplayWrapper.style.display = 'flex';
     footerControls.style.display = 'flex';
     isPracticeVisible = false;
     if (practiceHanziWriter) practiceHanziWriter.cancelQuiz();
   } else {
+    // Open Practice Mode
     if (!currentCard || !currentCard.char) return;
+    
     mainDisplayWrapper.style.display = 'none';
     footerControls.style.display = 'none';
     definitionsEl.style.display = 'none';
+    
+    // CRITICAL FIX: Display container BEFORE creating/setting writer
+    // HanziWriter needs the container to be visible to calculate dimensions
+    practiceContainer.style.display = 'flex';
+    
     const char = currentCard.char;
     const options = getHanziWriterOptions(char, true);
+    
     if (!practiceHanziWriter) {
       document.getElementById('stroke-order-animation').innerHTML = '';
       practiceHanziWriter = HanziWriter.create('stroke-order-animation', char, options);
     } else { 
         practiceHanziWriter.setCharacter(char, options); 
     }
+    
     resetPracticeView();
-    practiceContainer.style.display = 'flex';
     isPracticeVisible = true;
   }
 }
@@ -628,6 +664,9 @@ function handlePageUnload() {
 loadCredentials();
 // MODIFIED: Load profile data first
 loadProfileData();
+
+// NEW: Preload voices immediately on page load to avoid delay on first click
+getChineseVoice();
 
 // NEW: Reset lastSyncTime on load to ensure max-delay works right away if needed
 lastSyncTime = Date.now(); 
